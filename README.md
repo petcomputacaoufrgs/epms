@@ -1,5 +1,5 @@
 #EMS: an Expressive MIDI Serialiser
-*****
+
 ## Introduction
 
 The MIDI (Musical Instrument Digital Interface) protocol is extremely useful - and awesome -  when we want to work with digital audio. One of its many utilities is in Machine Learning, where it allows us to train data models to generate musical pieces.
@@ -35,3 +35,39 @@ An example of serialisation can be seen below. **False** means that the note is 
 | Lead Guitar  |          28 | C    | 4/4  |      83 | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False |
 | Lead Guitar  |          28 | C    | 4/4  |      83 | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False |
 | Lead Guitar  |          28 | C    | 4/4  |      83 | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False |
+
+## Usage
+First of all, you must import the package and define the settings for the serialiser.
+```python
+from EMS import serialisation, deserialisation
+
+SETTINGS = {
+    'RESOLUTION': 96,
+    'KEYBOARD_SIZE': 88,
+    'KEYBOARD_OFFSET': 21
+}
+```
+Then, to serialise:
+```python
+serialised = serialisation.file('Steely Dan - Deacon Blues.mid',
+                                SETTINGS,
+                                save_as='serialised_file.pkl') ## optional
+```
+And retrieving back the MIDI format:
+```python
+deserialised = deserialisation.file(serialised,
+                                    SETTINGS,
+                                    save_as='deserialised_file.mid')
+```
+
+## Results
+As the project is under development, results are quite weak. Nevertheless, one way of evaluating the success of the serialiser is by comparing the original file with the file after both serialization and deserialization.
+
+Original:
+![](result_analysis/original.png "Original MIDI file for Bill Wither's Ain't No Sunshine")
+
+Result with resolution of **36** frames per measure
+![](result_analysis/output_36_frames.png "Result with resolution of 36 frames")
+
+Result with resolution of **96** frames per measure
+![](result_analysis/output_96_frames.png "Result with resolution of 96 frames")
