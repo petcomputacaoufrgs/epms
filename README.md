@@ -1,4 +1,4 @@
-EMS: an Expressive MIDI Serialiser
+# EMS: an Expressive MIDI Serialiser
 
 ## Introduction
 
