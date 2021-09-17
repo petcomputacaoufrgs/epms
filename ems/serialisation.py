@@ -60,7 +60,6 @@ def transpose_stream_to_c(stream, force_eval=False):
 #
 # MIDI -> M21 Score
 def open_file(midi_path, no_drums=True):
-
     # declare and read
     mf = music21.midi.MidiFile()
     mf.open(midi_path)
@@ -104,7 +103,7 @@ def measure_data(measure):
 # extract frames from measure
 #
 #  M21 Measure -> Multi Hot Encoding
-def measure2performance(measure, SETTINGS, frames_per_beat):
+def measure2performance(measure, SETTINGS, ts_numerator):
     if not isinstance(SETTINGS, pd.Series):
         SETTINGS = pd.Series(SETTINGS)
 
@@ -112,7 +111,7 @@ def measure2performance(measure, SETTINGS, frames_per_beat):
 
     keyboard_range = SETTINGS.KEYBOARD_SIZE + SETTINGS.KEYBOARD_OFFSET - 1
 
-    frames = [[False for i in range(SETTINGS.KEYBOARD_SIZE)] for j in range(SETTINGS.RESOLUTION)]
+    frames = [[False for i in range(SETTINGS.KEYBOARD_SIZE)] for j in range(ts_numerator * SETTINGS.RESOLUTION)]
 
     for item in data:
 
@@ -142,20 +141,26 @@ def measure2performance(measure, SETTINGS, frames_per_beat):
         # the measure
 
         # start and end frames
-        frame_s = int(item.offset * frames_per_beat)
-        frame_e = frame_s + int(item.quarterLength * frames_per_beat)
+        frame_s = int(item.offset * SETTINGS.RESOLUTION)
+        frame_e = int(frame_s + (item.duration.quarterLength * SETTINGS.RESOLUTION))
+        # print(f'{frame_s}/{frame_e}')
 
         # note index on our keyboard
         i_key = item.pitch.midi - SETTINGS.KEYBOARD_OFFSET
 
         # turn them on captain!
         for frame in range(frame_s, frame_e):
-            frames[frame][i_key] = True
+            velocity = item.volume.velocityScalar
+            if velocity is not None and velocity > 0.1:
+                frames[frame][i_key] = round(velocity, 4)
+            else:
+                frames[frame][i_key] = False
 
     # create Pandas dataframe
     note_names = [key_index2note(i, SETTINGS.KEYBOARD_OFFSET).nameWithOctave for i in range(0, SETTINGS.KEYBOARD_SIZE)]
-    frame_count = [int(i) for i in range(1, SETTINGS.RESOLUTION + 1)]
-    stackframe = pd.DataFrame(frames, index=frame_count, columns=note_names)
+
+    frame_counter = [int(i) for i in range(0, ts_numerator * SETTINGS.RESOLUTION)]
+    stackframe = pd.DataFrame(frames, index=frame_counter, columns=note_names)
 
     return stackframe
 
@@ -163,7 +168,7 @@ def measure2performance(measure, SETTINGS, frames_per_beat):
 # Serialise a single measure
 #
 # M21 Measure -> Pandas DataFrame
-def measure(m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK):
+def measure(m_number, m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK):
     if not isinstance(SETTINGS, pd.Series):
         SETTINGS = pd.Series(SETTINGS)
 
@@ -200,23 +205,36 @@ def measure(m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK):
     ENVIRONMENT_BLOCK.TS = '{}/{}'.format(m_ts.numerator, m_ts.denominator)
     ENVIRONMENT_BLOCK.TEMPO = m_bpm
 
-    # calculate amount of frames per beat
-    frames_per_beat = SETTINGS.RESOLUTION // m_ts.numerator
-    # pandas stackframe
-    stackframe = measure2performance(transposed_measure,
-                                     SETTINGS,
-                                     frames_per_beat)
+    #             METRIC BLOCK
+    #           ======||||======
+    measure_counter = [int(m_number) for i in range(SETTINGS.RESOLUTION * m_ts.numerator)]
+    beat_counter = [(int(i // SETTINGS.RESOLUTION) + 1) for i in range(SETTINGS.RESOLUTION * m_ts.numerator)]
+    frame_counter = [(int(i % SETTINGS.RESOLUTION) + 1) for i in range(SETTINGS.RESOLUTION * m_ts.numerator)]
 
-    inst_df = pd.concat([INSTRUMENT_BLOCK] * SETTINGS.RESOLUTION, axis=1).T
+    # print(len(measure_counter), len(beat_counter), len(frame_counter))
 
-    env_df = pd.concat([ENVIRONMENT_BLOCK] * SETTINGS.RESOLUTION, axis=1).T
+    metric_bl = pd.DataFrame(
+        {
+            'MEASURE': measure_counter,
+            'BEAT': beat_counter,
+            'FRAME': frame_counter
+        }
+    )
+
+    perf_bl = measure2performance(transposed_measure,
+                                  SETTINGS,
+                                  m_ts.numerator)
+
+    inst_bl = pd.concat([INSTRUMENT_BLOCK] * (m_ts.numerator * SETTINGS.RESOLUTION), axis=1).T
+
+    env_bl = pd.concat([ENVIRONMENT_BLOCK] * (m_ts.numerator * SETTINGS.RESOLUTION), axis=1).T
     # env_df = env_df.reshape(len(ENVIRONMENT_BLOCK), SETTINGS.RESOLUTION)
 
     # print(f'INST DF: \n\n {inst_df.to_string()} \n Shape {inst_df.shape}\n')
     # print(f'ENV DF: \n\n {env_df.to_string()} \n Shape {env_df.shape}\n')
     # print(f'PERFORMANCE DF: \n\n {stackframe.to_string()} \n Shape {stackframe.shape}\n')
 
-    encoded_measure = pd.concat([inst_df, env_df, stackframe], axis=1).drop(0).dropna()
+    encoded_measure = pd.concat([inst_bl, metric_bl, env_bl, perf_bl], axis=1)
 
     return encoded_measure
 
@@ -232,34 +250,36 @@ def instrument(part, SETTINGS, instrument_list=None):
     if not isinstance(SETTINGS, pd.Series):
         SETTINGS = pd.Series(SETTINGS)
 
-    # inst_name = music21.instrument.instrumentFromMidiProgram(inst_midi_code).instrumentName
-    inst_name = part.partName
+    #   ========================
+    #       DEFINING BLOCKS
+    #       ===============
 
-    instrument_list.append(inst_name)
+    #           INSTRUMENT BLOCK
+    #           ======||||======
+    name = part.partName
+    inst = part.getElementsByClass(music21.instrument.Instrument)[0].instrumentName
+    instrument_list.append(name)
 
     try:
-        inst_midi_code = part.getElementsByClass(music21.instrument.Instrument)[0].midiProgram
+        midi_program = part.getElementsByClass(music21.instrument.Instrument)[0].midiProgram
     except:
-        inst_midi_code = 0
+        midi_program = 0
         logging.warning('Could not retrieve Midi Program from instrument, setting it to default value 0 ({})'
-                        .format(music21.instrument.instrumentFromMidiProgram(inst_midi_code).instrumentName))
-
-
+                        .format(music21.instrument.instrumentFromMidiProgram(midi_program).instrumentName))
 
     INSTRUMENT_BLOCK = pd.Series(
         {
-            'INSTRUMENT': inst_name,
-            'MIDI_CODE': inst_midi_code
+            'NAME': name,
+            'INSTRUMENT': inst,
+            'MIDI_PROGRAM': midi_program
         }
     )
 
-    #
-    #   ENVIRONMENT BLOCK
-    #
+    #           ENVIRONMENT BLOCK
+    #            ======||||======
 
     # flat the stream
     part = part.semiFlat
-
     # get part tempo
     metronome = part.getElementsByClass(music21.tempo.TempoIndication)
     if len(metronome) == 0:
@@ -268,7 +288,6 @@ def instrument(part, SETTINGS, instrument_list=None):
                         .format(bpm))
     else:
         bpm = metronome[0].getQuarterBPM()
-
     bpm = int(bpm)
 
     # filter parts that are not in 4/4
@@ -297,10 +316,10 @@ def instrument(part, SETTINGS, instrument_list=None):
     # a vector containing the measures
     part_df = []
     first_measure = True
-    for m in transposed_part.measures(1, n_measures):
+    for i, m in enumerate(transposed_part.measures(1, n_measures)):
 
         serialised_measure = pd.DataFrame(
-            measure(m,
+            measure(i+1, m,
                     SETTINGS,
                     INSTRUMENT_BLOCK,
                     ENVIRONMENT_BLOCK
