@@ -1,4 +1,4 @@
-#EMS: an Expressive MIDI Serialiser
+# EMS: an Expressive MIDI Serialiser
 
 ## Introduction
 
@@ -57,7 +57,7 @@ And retrieving back the MIDI format:
 ```python
 deserialised = deserialisation.file(serialised,
                                     SETTINGS,
-                                    save_as='deserialised_file.mid')
+                                    save_as='deserialised_file.mid') ## optional
 ```
 
 ## Results
