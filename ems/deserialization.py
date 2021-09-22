@@ -14,7 +14,7 @@ def is_continuous(l):
     # input()
     # if list is empty or len is 1,  return True
     if len(l) < 2: return True
-    return sorted(l) == list(range(min(l), max(l)+1))
+    return sorted(l) == list(range(min(l), max(l) + 1))
 
 
 # Key index in our keyboard -> M21 Note
@@ -43,9 +43,6 @@ def get_transpose_interval(ks):
 def measure(m_metric, m_environment, m_performance, SETTINGS):
     if not isinstance(SETTINGS, pd.Series):
         SETTINGS = pd.Series(SETTINGS)
-
-    # print(m_metric)
-    # input()
 
     deserialized_measure = music21.stream.Measure(number=int(m_metric.MEASURE.iloc[0]))
 
@@ -84,7 +81,7 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
             frames = list(m_metric.loc[on_frames.index].FRAME)
             # frames = range(1, len(frames) + 1)
 
-            print(f'Frames: {frames}')
+            # print(f'Frames: {frames}')
             # input()
 
             # if 'frames' is a continuous sequence it can become a single note.
@@ -115,7 +112,8 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
                         # remove from 'temp' the frame that
                         # caused this property loss
                         del temp[-1]
-                    break
+
+
 
                 # # calculate duration in frames (amount of frames on)
                 # n_obj = music21.note.Note(nameWithOctave=measure_note)
@@ -143,9 +141,9 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
             # print(f'Metric at frames index: {m_metric.loc[frames.index]}')
 
             # get the start frame of the note
-            beat_offset = (frames[0] * SETTINGS.RESOLUTION) / ts.numerator
+            beat_offset = (frames[0] * SETTINGS.RESOLUTION) % ts.numerator
             # beat_offset = (min(m_metric.iloc[frames.index].BEAT) + (min(m_metric.iloc[frames.index].FRAME) / SETTINGS.RESOLUTION))
-            print(f'Beat Offset: {beat_offset}')
+            # print(f'Beat Offset: {beat_offset}')
             # input()
 
             # insert into measure
@@ -173,15 +171,25 @@ def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERF
     # M21 object to be returned
     deserialised_part = music21.stream.Part()
 
+    part_name = INSTRUMENT_BLOCK.NAME[0]
+    inst_name = INSTRUMENT_BLOCK.INSTRUMENT[0]
+    midi_program = INSTRUMENT_BLOCK.MIDI_PROGRAM[0]
+
+    print(f'\n====================',
+          f'\nPart name: {part_name}',
+          f'\nInstrument name: {inst_name}',
+          f'\nInstrument MIDI program: {midi_program}')
+
     # set instrument
     try:
-        inst = music21.instrument.instrumentFromMidiProgram(INSTRUMENT_BLOCK.MIDI_PROGRAM[0])
+        m21_inst = music21.instrument.instrumentFromMidiProgram(midi_program)
     except:
-        inst = music21.instrument.fromString(INSTRUMENT_BLOCK.INSTRUMENT[0])
+        m21_inst = music21.instrument.fromString(inst_name)
 
-    inst_name = INSTRUMENT_BLOCK.NAME
-    inst.autoAssignMidiChannel()
-    deserialised_part.insert(0, inst)
+    print(f'\nMusic21 Instrument: {type(m21_inst)}',
+          f'\nInstrument sound: {m21_inst.instrumentSound}')
+    # inst.autoAssignMidiChannel()
+    deserialised_part.insert(0, m21_inst)
 
     # total number of measures (bars)
     # in this part
@@ -191,8 +199,7 @@ def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERF
     #
     # iterate over measures (bars)
     for measure_index in range(1, n_measures + 1):
-
-        print(f'Measure {measure_index}')
+        # print(f'Measure {measure_index}')
 
         measure_indexes = METRIC_BLOCK.loc[METRIC_BLOCK['MEASURE'] == measure_index]
         measure_indexes = measure_indexes.index
@@ -200,6 +207,8 @@ def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERF
         measure_metric = METRIC_BLOCK.iloc[measure_indexes]
         measure_environment = ENVIRONMENT_BLOCK.iloc[measure_indexes]
         measure_performance = PERFORMANCE_BLOCK.iloc[measure_indexes]
+
+        print(f'Measure {measure_index}')
 
         # send measure to deserialization
         midi_measure = measure(measure_metric,
@@ -209,7 +218,7 @@ def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERF
 
         deserialised_part.insert(measure_index, midi_measure)
 
-    deserialised_part.makeNotation(inPlace=True)
+    deserialised_part = deserialised_part.makeNotation(inPlace=True)
 
     if save_as is not None:
         deserialised_part.write('midi', fp=save_as)
@@ -232,7 +241,6 @@ def file(serialised, SETTINGS, save_as=None):
 
     # separate song parts by instrument
     for serial in instruments:
-
         #   RETRIEVE BLOCKS
         #   ======||=======
 
@@ -282,7 +290,8 @@ def file(serialised, SETTINGS, save_as=None):
         deserialized_score.insert(0, part)
         # print(instruments)
         # input()
-        deserialized_score.makeVoices(inPlace=True)
+        deserialized_score = deserialized_score.makeVoices(inPlace=True)
+        # deserialised_part = deserialised_part.partsToVoices()
         # deserialized_score.makeNotation(inPlace=True)
 
     # save .mid

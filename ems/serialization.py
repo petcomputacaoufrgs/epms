@@ -64,6 +64,8 @@ def open_file(midi_path, no_drums=True):
     mf = music21.midi.MidiFile()
     mf.open(midi_path)
 
+    # score = music21.converter.parse(midi_path).makeNotation().voicesToParts()
+
     if mf.format not in [0, 1]:
         # m21 cant read
         logging.warning('Music21 cant open format {} MIDI files. Skipping.'.format(mf.format))
@@ -151,8 +153,8 @@ def measure2performance(measure, SETTINGS, ts_numerator):
         # turn them on captain!
         for frame in range(frame_s, frame_e):
             velocity = item.volume.velocityScalar
-            if velocity is not None and velocity > 0.1:
-                frames[frame][i_key] = round(velocity, 4)
+            if velocity is not None:
+                frames[frame][i_key] = velocity
             else:
                 frames[frame][i_key] = False
 
@@ -250,27 +252,37 @@ def instrument(part, SETTINGS, instrument_list=None):
     if not isinstance(SETTINGS, pd.Series):
         SETTINGS = pd.Series(SETTINGS)
 
+    # flat the stream
+    part = part.semiFlat
+
     #   ========================
     #       DEFINING BLOCKS
     #       ===============
 
+
     #           INSTRUMENT BLOCK
     #           ======||||======
-    name = part.partName
-    inst = part.getElementsByClass(music21.instrument.Instrument)[0].instrumentName
-    instrument_list.append(name)
+    part_name = part.partName
+    m21_inst = part.getElementsByClass(music21.instrument.Instrument)[0]
+    inst_name = m21_inst.instrumentName
+    instrument_list.append(inst_name)
 
     try:
-        midi_program = part.getElementsByClass(music21.instrument.Instrument)[0].midiProgram
+        midi_program = m21_inst.midiProgram
     except:
         midi_program = 0
         logging.warning('Could not retrieve Midi Program from instrument, setting it to default value 0 ({})'
                         .format(music21.instrument.instrumentFromMidiProgram(midi_program).instrumentName))
 
+    print(f'\n====================',
+          f'\nPart name: {part_name}',
+          f'\nPart instrument name: {inst_name}',
+          f'\nPart instrument MIDI program: {midi_program}')
+
     INSTRUMENT_BLOCK = pd.Series(
         {
-            'NAME': name,
-            'INSTRUMENT': inst,
+            'NAME': part_name,
+            'INSTRUMENT': inst_name,
             'MIDI_PROGRAM': midi_program
         }
     )
@@ -278,8 +290,6 @@ def instrument(part, SETTINGS, instrument_list=None):
     #           ENVIRONMENT BLOCK
     #            ======||||======
 
-    # flat the stream
-    part = part.semiFlat
     # get part tempo
     metronome = part.getElementsByClass(music21.tempo.TempoIndication)
     if len(metronome) == 0:
@@ -346,9 +356,12 @@ def file(path, SETTINGS, save_as=None):
         SETTINGS = pd.Series(SETTINGS)
 
     score = open_file(path)
-    if not score:
-        # bad file
-        raise IOError
+    score = music21.converter.parse(path)
+    print(f'Is well formed score? {music21.converter.parse(path).isWellFormedNotation()}')
+    score = score.makeNotation()
+    score = score.expandRepeats()
+    # score.show('text')
+    # input()
 
     # meta = score.metadata
     instrument_list = []
@@ -356,16 +369,17 @@ def file(path, SETTINGS, save_as=None):
     # score.show('text')
     # input()
 
-    parts = music21.instrument.partitionByInstrument(score).parts
+    parts_in_score = music21.instrument.partitionByInstrument(score).parts
 
     # print('Instruments in file: {}'.format(len(score.parts)))
     # input()
 
     serialised_parts = []
 
-    for inst in parts:
+    # for part in parts_in_score:
+    for part in score.parts:
         serialised_parts.append(
-            instrument(inst,
+            instrument(part,
                        SETTINGS,
                        instrument_list)
         )
