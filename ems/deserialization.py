@@ -7,16 +7,6 @@ from tqdm import tqdm
 import pandas as pd
 import music21
 
-
-# discover if a list is a continuous sequence
-def is_continuous(l):
-    # print(f'list: {list}')
-    # input()
-    # if list is empty or len is 1,  return True
-    if len(l) < 2: return True
-    return sorted(l) == list(range(min(l), max(l) + 1))
-
-
 # Key index in our keyboard -> M21 Note
 def key_index2note(i, midi_offset):
     index = i + midi_offset
@@ -74,80 +64,40 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
 
         if not on_frames.empty:
 
-            # print(f'On frames: {on_frames}')
-            # input()
-
             # get the list of on frames
-            frames = list(m_metric.loc[on_frames.index].FRAME)
-            # frames = range(1, len(frames) + 1)
-
-            # print(f'Frames: {frames}')
-            # input()
-
-            # if 'frames' is a continuous sequence it can become a single note.
-            # if not, it'll become more than one
+            # this is a list of pairs
+            measure_on_frames = list(m_metric.loc[on_frames.index].FRAME)
 
             # TODO: maybe we should set a threshold on what should become another note
             # For example: if there's just one OFF frame between two ON frames, the OFF frame would be ignored
 
-            temp = []
-            while not is_continuous(frames):
-                # print('a')
-                # this will keep track of the frames we
-                # have already counted
-                while is_continuous(temp):
-                    # print('b')
-                    # temp is continuous, we'll try to add
-                    # the next frame
-                    temp.append(frames[0])
-
-                    if is_continuous(temp):
-                        # it temp is still continuous, it's safe to
-                        # remove the frame added in the last line
-                        # from the original 'frames' list
-                        del frames[0]
-                    else:
-                        # if temp is now no more
-                        # a continuous sequence, we must
-                        # remove from 'temp' the frame that
-                        # caused this property loss
-                        del temp[-1]
-
-
-
-                # # calculate duration in frames (amount of frames on)
-                # n_obj = music21.note.Note(nameWithOctave=measure_note)
-                # beat_dur = len(temp) / SETTINGS.RESOLUTION  # amount of beats
-                # n_obj.duration.quarterLength = abs(beat_dur)
-                # print(on_frames.loc[measure_note])
-                # input()
-                # # n_obj.volume.velocityScalar = on_frames[]
-                #
-                # # get the start frame of the note
-                # beat_offset = (frames[0] * SETTINGS.RESOLUTION) / ts.numerator
-                #
-                # # insert into stream
-                # deserialized_measure.insert(beat_offset, n_obj)
-
-            #
-            #  here list of frames is a continuous sequence
-            #
-
-            # calculate duration in quarters
+            # declare note object
             note_obj = music21.note.Note(nameWithOctave=measure_note)
-            beat_dur = len(frames) / SETTINGS.RESOLUTION
-            note_obj.duration.quarterLength = abs(beat_dur)
 
-            # print(f'Metric at frames index: {m_metric.loc[frames.index]}')
+            this_note_on_frames = []
 
-            # get the start frame of the note
-            beat_offset = (frames[0] * SETTINGS.RESOLUTION) % ts.numerator
-            # beat_offset = (min(m_metric.iloc[frames.index].BEAT) + (min(m_metric.iloc[frames.index].FRAME) / SETTINGS.RESOLUTION))
-            # print(f'Beat Offset: {beat_offset}')
-            # input()
+            # iterate over frames index
+            for i_frame in range(0, len(measure_on_frames)):
+                current_frame = on_frames.loc[i_frame]
+                print(current_frame)
 
-            # insert into measure
-            deserialized_measure.insert(beat_offset, note_obj)
+                if type(current_frame) is list:
+                    # play note
+                    if current_frame[0]:
+                        # note start
+                        this_note_on_frames.append(i_frame)
+                    else:
+                        # note end
+                        beat_dur = len(this_note_on_frames) / SETTINGS.RESOLUTION
+                        note_obj.duration.quarterLength = abs(beat_dur)
+                        # get the start frame of the note
+                        beat_offset = (this_note_on_frames[0] * SETTINGS.RESOLUTION) % ts.numerator
+                        # insert into measure
+                        deserialized_measure.insert(beat_offset, note_obj)
+                        this_note_on_frames = []
+                else:
+                    # continue
+                    this_note_on_frames.append(i_frame)
 
     # transpose it back to the original ks
     deserialized_measure.transpose(transpose_int, inPlace=True)

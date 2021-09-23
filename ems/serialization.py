@@ -144,7 +144,7 @@ def measure2performance(measure, SETTINGS, ts_numerator):
 
         # start and end frames
         frame_s = int(item.offset * SETTINGS.RESOLUTION)
-        frame_e = int(frame_s + (item.duration.quarterLength * SETTINGS.RESOLUTION))
+        frame_e = int(frame_s + (item.duration.quarterLength * SETTINGS.RESOLUTION)) - 1
         # print(f'{frame_s}/{frame_e}')
 
         # note index on our keyboard
@@ -152,10 +152,26 @@ def measure2performance(measure, SETTINGS, ts_numerator):
 
         # turn them on captain!
         for frame in range(frame_s, frame_e):
+            # print(f'{frame}/{frame_e}')
+            # input()
             velocity = item.volume.velocityScalar
             if velocity is not None:
-                frames[frame][i_key] = velocity
+                if frame == frame_s:
+                    # first frame, play
+                    frames[frame][i_key] = (True, velocity)
+                    # print(frames[frame][i_key])
+                    # input()
+                elif frame == frame_e-1:
+                    # last frame, stop
+                    frames[frame][i_key] = (False, velocity)
+                    # print(frames[frame][i_key])
+                    # input()
+                else:
+                    # none, continue
+                    frames[frame][i_key] = velocity
+                    # print(frames[frame][i_key])
             else:
+                # no notes
                 frames[frame][i_key] = False
 
     # create Pandas dataframe

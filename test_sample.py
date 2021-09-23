@@ -101,4 +101,4 @@ deserialized = deserialization.file(serialized,
                                     save_as=out_deserialized_name)
 
 # deserialised.plot()
-deserialized.show('midi')
+# deserialized.show('midi')
