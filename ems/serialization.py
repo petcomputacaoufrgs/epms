@@ -195,7 +195,7 @@ def measure(m_number, m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK):
     # check for key changes
     m_ks, transposed_measure = transpose_stream_to_c(m, force_eval=False)
     if m_ks is None:
-        m_ks = ENVIRONMENT_BLOCK.KS
+        m_ks = ENVIRONMENT_BLOCK.ORIGINAL_KS
 
     # check for tempo changes
     m_bpm = m.getElementsByClass(music21.tempo.TempoIndication)
@@ -219,7 +219,7 @@ def measure(m_number, m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK):
         m_ts = ENVIRONMENT_BLOCK.TS
 
     # Update Env according to this measure
-    ENVIRONMENT_BLOCK.KS = m_ks
+    ENVIRONMENT_BLOCK.ORIGINAL_KS = m_ks
     ENVIRONMENT_BLOCK.TS = '{}/{}'.format(m_ts.numerator, m_ts.denominator)
     ENVIRONMENT_BLOCK.TEMPO = m_bpm
 
@@ -281,6 +281,15 @@ def instrument(part, SETTINGS, instrument_list=None):
     part_name = part.partName
     m21_inst = part.getElementsByClass(music21.instrument.Instrument)[0]
     inst_name = m21_inst.instrumentName
+
+    # This is a terminal case.
+    #
+    # Without the instrument name a lot of problems show up.
+    # So, we will avoid this case for now
+    if inst_name is None:
+        return None
+
+    inst_sound = m21_inst.instrumentSound
     instrument_list.append(inst_name)
 
     try:
@@ -293,13 +302,15 @@ def instrument(part, SETTINGS, instrument_list=None):
     print(f'\n====================',
           f'\nPart name: {part_name}',
           f'\nPart instrument name: {inst_name}',
-          f'\nPart instrument MIDI program: {midi_program}')
+          f'\nPart instrument MIDI program: {midi_program}',
+          f'\nInstrument sound: {inst_sound}')
 
     INSTRUMENT_BLOCK = pd.Series(
         {
             'NAME': part_name,
             'INSTRUMENT': inst_name,
-            'MIDI_PROGRAM': midi_program
+            'MIDI_PROGRAM': midi_program,
+            'SOUND': inst_sound
         }
     )
 
@@ -333,7 +344,7 @@ def instrument(part, SETTINGS, instrument_list=None):
 
     ENVIRONMENT_BLOCK = pd.Series(
         {
-            'KS': original_ks,
+            'ORIGINAL_KS': original_ks,
             'TS': '{}/{}'.format(ts.numerator, ts.denominator),
             'TEMPO': bpm
         }
@@ -386,6 +397,7 @@ def file(path, SETTINGS, save_as=None):
     # input()
 
     parts_in_score = music21.instrument.partitionByInstrument(score).parts
+    # parts_in_score = score.parts
 
     # print('Instruments in file: {}'.format(len(score.parts)))
     # input()
@@ -401,7 +413,7 @@ def file(path, SETTINGS, save_as=None):
         )
 
     serialised_df = pd.concat([*serialised_parts], axis=0)
-    serialised_df = serialised_df.set_index('INSTRUMENT')
+    serialised_df = serialised_df.set_index('NAME')
 
     if save_as is not None:
         serialised_df.to_pickle(save_as)

@@ -39,9 +39,12 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
     # get info about the first frame
     # and considering it as the
     # 'Main' info of the song
-    measure_ks = m_environment.KS.mode()[0]
+    measure_ks = m_environment.ORIGINAL_KS.mode()[0]
     measure_ts = m_environment.TS.mode()[0]
     measure_tempo = m_environment.TEMPO.mode()[0]
+
+    met_perf_concat = pd.concat([m_metric.reset_index(), m_performance.reset_index()], axis=1)
+    # print(met_perf_concat); input()
 
     ks = music21.key.Key(measure_ks)
     transpose_int = get_transpose_interval(ks)
@@ -58,15 +61,30 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
 
     # decode the measure data, note by note
     for measure_note in m_performance.columns:
+        # print(f'\nMeasure note\n============\n', measure_note)
 
         # filter the frames where the current note is on
-        on_frames = m_performance.loc[m_performance.loc[:, measure_note] != False, measure_note]
+        on_frames = met_perf_concat.loc[met_perf_concat.loc[:, measure_note] != False, measure_note]
+        # on_frames.index += 1
+        # print(f'\nOn frames\n============\n', on_frames)
 
         if not on_frames.empty:
 
-            # get the list of on frames
-            # this is a list of pairs
-            measure_on_frames = list(m_metric.loc[on_frames.index].FRAME)
+            print(f'\nOn frames\n============\n', on_frames)
+
+            '''
+            On frames
+            ============
+             8      (True, 0.5039370078740157)
+            9                        0.503937
+            10    (False, 0.5039370078740157)
+            28     (True, 0.5039370078740157)
+            29                       0.503937
+            30    (False, 0.5039370078740157)
+            Name: A4, dtype: object
+            '''
+
+            frames_indexes = on_frames.index
 
             # TODO: maybe we should set a threshold on what should become another note
             # For example: if there's just one OFF frame between two ON frames, the OFF frame would be ignored
@@ -76,17 +94,23 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
 
             this_note_on_frames = []
 
-            # iterate over frames index
-            for i_frame in range(0, len(measure_on_frames)):
-                current_frame = on_frames.loc[i_frame]
-                print(current_frame)
+            # iterate over frames
+            for i_on_frame, current_frame in enumerate(on_frames):
+
+                frame_number = frames_indexes[i_on_frame]
+
+                # print(f'\nFrame {frame_number}\n=============\n', current_frame); input()
+
+
+                # AQUI VAI SER A DIVISAO PELO TIPO DO DADO
 
                 if type(current_frame) is list:
                     # play note
                     if current_frame[0]:
                         # note start
-                        this_note_on_frames.append(i_frame)
+                        this_note_on_frames.append(frame_number)
                     else:
+                        this_note_on_frames.append(frame_number)
                         # note end
                         beat_dur = len(this_note_on_frames) / SETTINGS.RESOLUTION
                         note_obj.duration.quarterLength = abs(beat_dur)
@@ -97,7 +121,7 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
                         this_note_on_frames = []
                 else:
                     # continue
-                    this_note_on_frames.append(i_frame)
+                    this_note_on_frames.append(frame_number)
 
     # transpose it back to the original ks
     deserialized_measure.transpose(transpose_int, inPlace=True)
@@ -121,20 +145,24 @@ def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERF
     # M21 object to be returned
     deserialised_part = music21.stream.Part()
 
-    part_name = INSTRUMENT_BLOCK.NAME[0]
-    inst_name = INSTRUMENT_BLOCK.INSTRUMENT[0]
-    midi_program = INSTRUMENT_BLOCK.MIDI_PROGRAM[0]
+    part_name = INSTRUMENT_BLOCK.NAME
+    inst_name = INSTRUMENT_BLOCK.INSTRUMENT
+    midi_program = INSTRUMENT_BLOCK.MIDI_PROGRAM
+    inst_sound = INSTRUMENT_BLOCK.SOUND
 
     print(f'\n====================',
           f'\nPart name: {part_name}',
           f'\nInstrument name: {inst_name}',
-          f'\nInstrument MIDI program: {midi_program}')
+          f'\nInstrument MIDI program: {midi_program}',
+          f'\nInstrument sound: {inst_sound}')
 
     # set instrument
     try:
         m21_inst = music21.instrument.instrumentFromMidiProgram(midi_program)
     except:
         m21_inst = music21.instrument.fromString(inst_name)
+
+    m21_inst.instrumentSound = inst_sound
 
     print(f'\nMusic21 Instrument: {type(m21_inst)}',
           f'\nInstrument sound: {m21_inst.instrumentSound}')
@@ -183,22 +211,25 @@ def file(serialised, SETTINGS, save_as=None):
 
     deserialized_score = music21.stream.Score()
 
-    # meta = serialised.metadata
-
     # get a list of unique instruments in the song
     instruments_list = list(set(serialised.index))
     instruments = [serialised.loc[i] for i in instruments_list]
+
+    # print(f'\n\nINSTRUMENTS\n===========\n {instruments}'); input()
 
     # separate song parts by instrument
     for serial in instruments:
         #   RETRIEVE BLOCKS
         #   ======||=======
 
-        INSTRUMENT_BLOCK = pd.DataFrame(
+        # print(f'\nSERIAL\n===========\n {serial}'); input()
+
+        INSTRUMENT_BLOCK = pd.Series(
             {
-                'INSTRUMENT': serial.index,
-                'NAME': serial.NAME,
-                'MIDI_PROGRAM': serial.MIDI_PROGRAM
+                'NAME': serial.index[0],
+                'INSTRUMENT': serial.INSTRUMENT[0],
+                'MIDI_PROGRAM': serial.MIDI_PROGRAM[0],
+                'SOUND': serial.SOUND[0],
             }
         )
 
@@ -212,18 +243,13 @@ def file(serialised, SETTINGS, save_as=None):
 
         ENVIRONMENT_BLOCK = pd.DataFrame(
             {
-                'KS': serial.KS,
+                'ORIGINAL_KS': serial.ORIGINAL_KS,
                 'TS': serial.TS,
                 'TEMPO': serial.TEMPO,
             }
         )
 
-        # drop blocks to get performance
-        drop_list = [i for i in set(INSTRUMENT_BLOCK.columns)]
-        drop_list.remove('INSTRUMENT')
-        drop_list = drop_list + [i for i in set(METRIC_BLOCK.columns)]
-        drop_list = drop_list + [i for i in set(ENVIRONMENT_BLOCK.columns)]
-        PERFORMANCE_BLOCK = serial.drop(columns=drop_list).reset_index(drop=True)
+        PERFORMANCE_BLOCK = serial.iloc[:, range((len(serial.columns) - SETTINGS.KEYBOARD_SIZE), len(serial.columns))]
 
         # print(PERFORMANCE_BLOCK)
 
@@ -233,19 +259,19 @@ def file(serialised, SETTINGS, save_as=None):
                           INSTRUMENT_BLOCK,
                           METRIC_BLOCK.reset_index(drop=True),
                           ENVIRONMENT_BLOCK.reset_index(drop=True),
-                          PERFORMANCE_BLOCK.reset_index(drop=True)
+                          PERFORMANCE_BLOCK
                           )
 
         # insert the part at the beginning of the file
         deserialized_score.insert(0, part)
         # print(instruments)
         # input()
-        deserialized_score = deserialized_score.makeVoices(inPlace=True)
+        # deserialized_score = deserialized_score.makeVoices(inPlace=True)
         # deserialised_part = deserialised_part.partsToVoices()
-        # deserialized_score.makeNotation(inPlace=True)
+    deserialized_score.makeNotation(inPlace=True)
 
     # save .mid
-    if save_as is not None:
+    if deserialized_score is not None and save_as is not None:
         deserialized_score.write("midi", save_as)
 
     return deserialized_score

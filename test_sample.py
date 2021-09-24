@@ -45,7 +45,7 @@ SETTINGS = {
 # .Deacon Blues.mid                      -> KeyError:
 
 
-file = 'test_files/Lucy In The Sky With Diamonds.mid'
+file = 'test_files/George Benson - Breezin.mid'
 out_serialized_name = 'out_serial.pkl'
 out_deserialized_name = 'out_deserialised.mid'
 
@@ -70,29 +70,40 @@ serialized = serialization.file(file,
 
 serial_instruments = list(enumerate(set(serialized.index)))
 
-# stop = False
-# while not stop:
-#     print('\nInstruments detected:')
-#     print('\t.(ID, INSTRUMENT)')
-#     print('\t.---------------)')
-#     for instrument in serial_instruments:
-#         print(f'\t.{instrument}')
-#
-#     sel_inst = input('\n\nEnter ID of instrument of interest or STOP: #')
-#
-#     if sel_inst.upper() == 'STOP': break
-#     else: sel_inst = int(sel_inst)
-#
-#     sel_inst_name = serial_instruments[sel_inst][1]
-#
-#     target_instrument = serialized.loc[serialized.index == sel_inst_name]
-#
-#     print(f'Serial of instrument {sel_inst_name}:\n ', target_instrument.to_string())
-#
-#     measure_s = 5
-#     measure_e = 8
-#     measures = target_instrument[target_instrument['MEASURE'].between(measure_s, measure_e, inclusive=True)]
-#     print(measures.to_markdown())
+stop = False
+while not stop:
+    print('\nInstruments detected:')
+    print('\t.(ID, INSTRUMENT)')
+    print('\t.---------------)')
+    for instrument in serial_instruments:
+        print(f'\t.{instrument}')
+
+    sel_inst = input('\n\nEnter ID of instrument of interest: #')
+
+    if sel_inst.upper() == '': break
+    else: sel_inst = int(sel_inst)
+
+    sel_inst_name = serial_instruments[sel_inst][1]
+    target_instrument = serialized.loc[serialized.index == sel_inst_name]
+
+    measure_view = True
+    while measure_view:
+        # single measure
+        measure_s = input('\nEnter number of measure to show: #')
+        if measure_s.upper() == '': measure_view = False; stop = False;
+        else:
+            measure_s = int(measure_s)
+
+            # measure_e = measure_s
+            # measures = target_instrument[target_instrument['MEASURE'].between(measure_s, measure_e, inclusive=True)]
+            measures = target_instrument[target_instrument['MEASURE'] == measure_s]
+            print(measures.to_markdown())
+            measure_view = True
+            stop = False
+
+    # print(f'Serial of instrument {sel_inst_name}:\n ', target_instrument.to_string())
+
+
 
 # Deserialize data
 print('\n\n\n\t << Deserializing... >> \n\n')
@@ -100,5 +111,5 @@ deserialized = deserialization.file(serialized,
                                     SETTINGS,
                                     save_as=out_deserialized_name)
 
-# deserialised.plot()
+# deserialized.plot()
 # deserialized.show('midi')
