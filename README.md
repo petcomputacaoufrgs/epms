@@ -1,35 +1,77 @@
-# EMS: an Expressive MIDI Serialiser
+# EMS: an Expressive MIDI Serializer
 
 ## Introduction
 
 The MIDI (Musical Instrument Digital Interface) protocol is extremely useful - and awesome -  when we want to work with digital audio. One of its many utilities is in Machine Learning, where it allows us to train data models to generate musical pieces.
 However, the current literature suffer from the lack of a tool that transcribes MIDI data to a model-friendly structure while preserving the whole expressive dimension of music.
 
-EMS is being build to address that need. While simultaneously working on a LSTM that predict and translates musical data between instruments, our [PET](https://www.inf.ufrgs.br/site/pet/) group from the [Institute of Informatics](https://inf.ufrgs.br)  of the [Federal University of Rio Grande do Sul (UFRGS)](https://ufrgs.br) - Brazil, is maintaining and developing this repo.
+EMSerial is being build to address that need. While simultaneously working on a LSTM that predict and translates musical data between instruments, our [PET](https://www.inf.ufrgs.br/site/pet/) group from the [Institute of Informatics](https://inf.ufrgs.br)  of the [Federal University of Rio Grande do Sul (UFRGS)](https://ufrgs.br) - Brazil, is maintaining and developing this repo.
 
  With the advances of [MIDI 2.0](https://www.midi.org/midi-articles/details-about-midi-2-0-midi-ci-profiles-and-property-exchange) in mind, we're working on merging concepts from Music Information Retrieval (MIR) and Machine Learning (ML) to prepare the ground for future works that can popularize the feeling of making music.
 
 
-## The concept
+## The Concept
 
-The main idea behind the project is to represent a MIDI file in some format that is easy to manipulate and feed to a model, like a neural network.
-Simply put, we transform the input file in a **Pandas DataFrame** with a column for every information we want to maintain.
+The main idea behind the project is to represent a MIDI file in some format that is easy to manipulate and feed to a Machine Learning (ML) model, like a neural network.
+Simply put, we transform the input file in a **Pandas DataFrame** with a column for every information we want to represent.
 
-There are currently 3 setting parameters for the serialisation process:
-1. Resolution: this is the amount of *frames* that will represent every measure of the song.
-2. Keyboard Size: this is the amount on *notes* that we'll be tracked by the serialiser.
-3. Keyboard Offset: this is the *MIDI value* of the first key in our keyboard
-   
+There are currently 3 setting parameters for the serialization process:
+1. **RESOLUTION** (int): the amount of *frames* per beat to be recorded.
+2. **KEYBOARD_SIZE** (int): the amount on *notes* that we'll be tracked by the serializer.
+3. **KEYBOARD_OFFSET** (int): the *MIDI value* of the first key in our keyboard
+
+The serial DataFrame is structured in a set of different *blocks*: 
+* the **Instrument Block**, that stores information about instruments qualities
+* the **Metric Block**, that will be our time reference across the song
+* the **Environment Block**, that provides the musical context of one's model environment (Key Signatures, Time Signatures, Tempo, ...)
+* and the **Performance Block**, that is a *piano-roll*-like representation that specifies one column for every
+key in our model's 'artificial piano'. In this block we focus on representing the main
+  expressive characteristics of human musical performances, such as *dynamics*, *syncopations* and *articulations*. 
+![](docs/serial-diagram.png "Diagram representing the serial block division concept.")
+
+### Performance Block (PB) Representation
+As a group project decision, the values stored in the PB are formatted in a way that we can
+easily turn one of the blocks rows (one frame) into a **Multi Hot Encoded frame**, that can be
+use as input vector to a model that uses Binary Cross Entropy Loss (BCEL) to get a rapidly convergent
+*'what note should I play?'* kind of learning.
+In that sense, the data inside the PB is represented in a way where different data types provide 
+different semantic meaning for a note in the performance encoding:
+
+####Boolean
+* **False**: represent silence, the note is not being played in the frame. 
+####List (Boolean, Float32)
+* **(True, ***value***)**: represent that the note starts playing in the frame with scalar velocity  *****value*****.
+* **(False, ***value***)**: represent that the note stops playing in the frame with last frame scalar velocity being *****value*****.
+####Float32
+* *****value*****: represent that this note continue playing in the frame with current scalar velocity *****value*****.
+
+This way, we can derive either a vector of booleans (notes played) or
+a vector of floats (the velocity of the played notes) from the same structure.
+The two vectors, then, represent different characteristics of a musical performance.
+
+
+## Usage and Example
+First of all, you must import the package and define the settings for the serializer.
+```python
+from EMS import serialization, deserialization
+
+SETTINGS = {
+    'RESOLUTION': 16,
+    'KEYBOARD_SIZE': 88,
+    'KEYBOARD_OFFSET': 21
+}
+```
+Then, to serialize:
+```python
+serial = serialization.file('test_midi_files/George Benson - Breezin.mid',
+                            SETTINGS,
+                            save_as='serial.pkl') ## optional
+```
 The following is the score for the first flute measure of George Bensons - Breezin:
 
-![](result_analysis/breezin_flute_first_measure.png "Score for the first flute measure of George Bensons - Breezin")
-
+![](docs/breezin_flute_first_measure.png "Score for the first flute measure of George Bensons - Breezin.")
+  
 The serial version of this measure can be seen below, where in a note column:
-
-* **False** means that the note is not played in that frame. 
-* **(True, ***vel***)** means that the note start playing in this frame with velocity *****vel*****.
-* *****vel***** means that this note continue playing in this frame with velocity *****vel*****.
-* **(False, ***vel***)** means that the note stop playing in this frame with velocity *****vel*****.
 
 | NAME   | INSTRUMENT   |   MIDI_PROGRAM | SOUND             |   MEASURE |   BEAT |   FRAME | ORIGINAL_KS   | TS   |   TEMPO | A0    | B-0   | B0    | C1    | C#1   | D1    | E-1   | E1    | F1    | F#1   | G1    | G#1   | A1    | B-1   | B1    | C2    | C#2   | D2    | E-2   | E2    | F2    | F#2   | G2    | G#2   | A2    | B-2   | B2    | C3    | C#3   | D3    | E-3   | E3    | F3    | F#3   | G3    | G#3   | A3    | B-3   | B3    | C4    | C#4   | D4    | E-4   | E4    | F4    | F#4   | G4    | G#4   | A4                          | B-4   | B4    | C5                          | C#5                         | D5                          | E-5   | E5                          | F5                          | F#5   | G5    | G#5   | A5                          | B-5   | B5    | C6                          | C#6                         | D6                          | E-6   | E6                          | F6                          | F#6   | G6    | G#6   | A6    | B-6   | B6    | C7    | C#7   | D7    | E-7   | E7    | F7    | F#7   | G7    | G#7   | A7    | B-7   | B7    | C8    |
 |:-------|:-------------|---------------:|:------------------|----------:|-------:|--------:|:--------------|:-----|--------:|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:----------------------------|:------|:------|:----------------------------|:----------------------------|:----------------------------|:------|:----------------------------|:----------------------------|:------|:------|:------|:----------------------------|:------|:------|:----------------------------|:----------------------------|:----------------------------|:------|:----------------------------|:----------------------------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|
@@ -98,39 +140,25 @@ The serial version of this measure can be seen below, where in a note column:
 | Winds  | Flute        |             73 | wind.flutes.flute |         1 |      4 |      15 | C             | 4/4  |      82 | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False                       | False | False | (False, 0.5039370078740157) | False                       | False                       | False | False                       | False                       | False | False | False | False                       | False | False | False                       | False                       | False                       | False | False                       | False                       | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False |
 | Winds  | Flute        |             73 | wind.flutes.flute |         1 |      4 |      16 | C             | 4/4  |      82 | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False                       | False | False | False                       | False                       | False                       | False | False                       | False                       | False | False | False | False                       | False | False | False                       | False                       | False                       | False | False                       | False                       | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False |
 
-
-## Usage
-First of all, you must import the package and define the settings for the serializer.
-```python
-from EMS import serialization, deserialization
-
-SETTINGS = {
-    'RESOLUTION': 96,
-    'KEYBOARD_SIZE': 88,
-    'KEYBOARD_OFFSET': 21
-}
-```
-Then, to serialize:
-```python
-serialized = serialization.file('George Benson - Breezin.mid',
-                                SETTINGS,
-                                save_as='serialized_file.pkl') ## optional
-```
 And retrieving back the MIDI format:
 ```python
-deserialized = deserialization.file(serialized,
+deserialized = deserialization.file(serial,
                                     SETTINGS,
-                                    save_as='deserialized_file.mid') ## optional
+                                    save_as='result.mid') ## optional
 ```
 
-## Results
-As the project is under development, results are quite weak. Nevertheless, one way of evaluating the success of the serialiser is by comparing the original file with the file after both serialization and deserialization.
+[comment]: <> (## Results)
 
-Original:
-![](result_analysis/original.png "Original MIDI file for Bill Wither's Ain't No Sunshine")
+[comment]: <> (As the project is under development, results are quite weak. Nevertheless, one way of evaluating the success of the serialiser is by comparing the original file with the file after both serialization and deserialization.)
 
-Result with resolution of **36** frames per measure
-![](result_analysis/output_36_frames.png "Result with resolution of 36 frames")
+[comment]: <> (Original:)
 
-Result with resolution of **96** frames per measure
-![](result_analysis/output_96_frames.png "Result with resolution of 96 frames")
+[comment]: <> (![]&#40;result_analysis/original.png "Original MIDI file for Bill Wither's Ain't No Sunshine"&#41;)
+
+[comment]: <> (Result with resolution of **36** frames per measure)
+
+[comment]: <> (![]&#40;result_analysis/output_36_frames.png "Result with resolution of 36 frames"&#41;)
+
+[comment]: <> (Result with resolution of **96** frames per measure)
+
+[comment]: <> (![]&#40;result_analysis/output_96_frames.png "Result with resolution of 96 frames"&#41;)

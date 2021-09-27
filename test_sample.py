@@ -1,9 +1,7 @@
 import pandas as pd
 from music21 import converter, environment
 import tabulate
-from ems import serialization, deserialization
-
-environment.set('musicxmlPath', '/usr/bin/mscore')
+from src import serialization, deserialization, interactive_debug_serial
 
 SETTINGS = {
     'RESOLUTION': 16,
@@ -42,12 +40,12 @@ SETTINGS = {
 # .Do It Again.mid                       -> KeyError: 80
 # .Hey Nineteen.mid                      -> KeyError: 52
 # .Killer Queen                          -> KeyError: 52
-# .Deacon Blues.mid                      -> KeyError:
+# .Deacon Blues.mid                      -> KeyError: 52
 
 
-file = 'test_files/George Benson - Breezin.mid'
-out_serialized_name = 'out_serial.pkl'
-out_deserialized_name = 'out_deserialised.mid'
+file = 'test_midi_files/George Benson - Breezin.mid'
+out_serialized_name = 'temp_files/serial.pkl'
+out_deserialized_name = 'temp_files/result.mid'
 
 
 # Show original file as text
@@ -57,59 +55,27 @@ out_deserialized_name = 'out_deserialised.mid'
 # input()
 
 # Serialize data
-print('Serializing...')
-serialized = serialization.file(file,
-                                SETTINGS,
-                                save_as=out_serialized_name)
+# print('Serializing...')
+# serialized = serialization.file(file,
+#                                 SETTINGS,
+#                                 save_as=out_serialized_name)
 
-# print('Getting serial...')
-# serialized = pd.read_pickle(out_serialized_name)
+print('Getting serial...')
+serialized = pd.read_pickle(out_serialized_name)
 
 # print(serialized.to_string())
-# input()
 
-serial_instruments = list(enumerate(set(serialized.index)))
-
-stop = False
-while not stop:
-    print('\nInstruments detected:')
-    print('\t.(ID, INSTRUMENT)')
-    print('\t.---------------)')
-    for instrument in serial_instruments:
-        print(f'\t.{instrument}')
-
-    sel_inst = input('\n\nEnter ID of instrument of interest: #')
-
-    if sel_inst.upper() == '': break
-    else: sel_inst = int(sel_inst)
-
-    sel_inst_name = serial_instruments[sel_inst][1]
-    target_instrument = serialized.loc[serialized.index == sel_inst_name]
-
-    measure_view = True
-    while measure_view:
-        # single measure
-        measure_s = input('\nEnter number of measure to show: #')
-        if measure_s.upper() == '': measure_view = False; stop = False;
-        else:
-            measure_s = int(measure_s)
-
-            # measure_e = measure_s
-            # measures = target_instrument[target_instrument['MEASURE'].between(measure_s, measure_e, inclusive=True)]
-            measures = target_instrument[target_instrument['MEASURE'] == measure_s]
-            print(measures.to_markdown())
-            measure_view = True
-            stop = False
-
-    # print(f'Serial of instrument {sel_inst_name}:\n ', target_instrument.to_string())
-
-
+interactive_debug_serial(serialized)
 
 # Deserialize data
 print('\n\n\n\t << Deserializing... >> \n\n')
 deserialized = deserialization.file(serialized,
                                     SETTINGS,
                                     save_as=out_deserialized_name)
+
+deserialized.show('text')
+# deserialized.plot()
+# input()
 
 # deserialized.plot()
 # deserialized.show('midi')
