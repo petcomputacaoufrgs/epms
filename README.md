@@ -37,12 +37,12 @@ use as input vector to a model that uses Binary Cross Entropy Loss (BCEL) to get
 In that sense, the data inside the PB is represented in a way where different data types provide 
 different semantic meaning for a note in the performance encoding:
 
-####Boolean
+#### Boolean
 * **False**: represent silence, the note is not being played in the frame. 
-####List (Boolean, Float32)
+#### List (Boolean, Float32)
 * **(True, ***value***)**: represent that the note starts playing in the frame with scalar velocity  *****value*****.
 * **(False, ***value***)**: represent that the note stops playing in the frame with last frame scalar velocity being *****value*****.
-####Float32
+#### Float32
 * *****value*****: represent that this note continue playing in the frame with current scalar velocity *****value*****.
 
 This way, we can derive either a vector of booleans (notes played) or
