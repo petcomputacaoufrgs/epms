@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="EMSerial-PET-COMP-UFRGS",
+    name="EMS",
     version="0.0.1",
     author="PET Computação UFRGS",
     author_email="pet@inf.ufrgs.br",
@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/petcomputacaoufrgs/EMS",
     project_urls={
-        "LSTM model using EMSerial": "https://github.com/petcomputacaoufrgs/papagaio",
+        "LSTM model using EMS": "https://github.com/petcomputacaoufrgs/papagaio",
     },
     classifiers=[
         "Programming Language :: Python :: 3",

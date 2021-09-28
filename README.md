@@ -29,7 +29,7 @@ key in our model's 'artificial piano'. In this block we focus on representing th
   expressive characteristics of human musical performances, such as *dynamics*, *syncopations* and *articulations*. 
 ![](docs/serial-diagram.png "Diagram representing the serial block division concept.")
 
-### Performance Block (PB) Representation
+## Performance Block (PB) Representation
 As a group project decision, the values stored in the PB are formatted in a way that we can
 easily turn one of the blocks rows (one frame) into a **Multi Hot Encoded frame**, that can be
 use as input vector to a model that uses Binary Cross Entropy Loss (BCEL) to get a rapidly convergent
@@ -37,13 +37,18 @@ use as input vector to a model that uses Binary Cross Entropy Loss (BCEL) to get
 In that sense, the data inside the PB is represented in a way where different data types provide 
 different semantic meaning for a note in the performance encoding:
 
-#### Boolean
-* **False**: represent silence, the note is not being played in the frame. 
-#### List (Boolean, Float32)
-* **(True, ***value***)**: represent that the note starts playing in the frame with scalar velocity  *****value*****.
-* **(False, ***value***)**: represent that the note stops playing in the frame with last frame scalar velocity being *****value*****.
-#### Float32
-* *****value*****: represent that this note continue playing in the frame with current scalar velocity *****value*****.
+> ### **Boolean**
+> 
+> **False**: represent silence, the note is not being played in the frame. 
+
+> ### **List (Boolean, Float32)**
+> 
+>  **(True, ***value***)**: represent that the note starts playing in the frame with scalar velocity  *****value*****.
+>  **(False, ***value***)**: represent that the note stops playing in the frame with last frame scalar velocity being *****value*****.
+
+> ### Float32
+> 
+> *****value*****: represent that this note continue playing in the frame with current scalar velocity *****value*****.
 
 This way, we can derive either a vector of booleans (notes played) or
 a vector of floats (the velocity of the played notes) from the same structure.
@@ -71,7 +76,7 @@ The following is the score for the first flute measure of George Bensons - Breez
 
 ![](docs/breezin_flute_first_measure.png "Score for the first flute measure of George Bensons - Breezin.")
   
-The serial version of this measure can be seen below, where in a note column:
+The serial version of this measure can be seen below, it is a Pandas DataFrame with dimensions (64, 98):
 
 | NAME   | INSTRUMENT   |   MIDI_PROGRAM | SOUND             |   MEASURE |   BEAT |   FRAME | ORIGINAL_KS   | TS   |   TEMPO | A0    | B-0   | B0    | C1    | C#1   | D1    | E-1   | E1    | F1    | F#1   | G1    | G#1   | A1    | B-1   | B1    | C2    | C#2   | D2    | E-2   | E2    | F2    | F#2   | G2    | G#2   | A2    | B-2   | B2    | C3    | C#3   | D3    | E-3   | E3    | F3    | F#3   | G3    | G#3   | A3    | B-3   | B3    | C4    | C#4   | D4    | E-4   | E4    | F4    | F#4   | G4    | G#4   | A4                          | B-4   | B4    | C5                          | C#5                         | D5                          | E-5   | E5                          | F5                          | F#5   | G5    | G#5   | A5                          | B-5   | B5    | C6                          | C#6                         | D6                          | E-6   | E6                          | F6                          | F#6   | G6    | G#6   | A6    | B-6   | B6    | C7    | C#7   | D7    | E-7   | E7    | F7    | F#7   | G7    | G#7   | A7    | B-7   | B7    | C8    |
 |:-------|:-------------|---------------:|:------------------|----------:|-------:|--------:|:--------------|:-----|--------:|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:----------------------------|:------|:------|:----------------------------|:----------------------------|:----------------------------|:------|:----------------------------|:----------------------------|:------|:------|:------|:----------------------------|:------|:------|:----------------------------|:----------------------------|:----------------------------|:------|:----------------------------|:----------------------------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|:------|
@@ -140,7 +145,7 @@ The serial version of this measure can be seen below, where in a note column:
 | Winds  | Flute        |             73 | wind.flutes.flute |         1 |      4 |      15 | C             | 4/4  |      82 | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False                       | False | False | (False, 0.5039370078740157) | False                       | False                       | False | False                       | False                       | False | False | False | False                       | False | False | False                       | False                       | False                       | False | False                       | False                       | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False |
 | Winds  | Flute        |             73 | wind.flutes.flute |         1 |      4 |      16 | C             | 4/4  |      82 | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False                       | False | False | False                       | False                       | False                       | False | False                       | False                       | False | False | False | False                       | False | False | False                       | False                       | False                       | False | False                       | False                       | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False | False |
 
-And retrieving back the MIDI format:
+Getting back to the MIDI format is simple:
 ```python
 deserialized = deserialization.file(serial,
                                     SETTINGS,
