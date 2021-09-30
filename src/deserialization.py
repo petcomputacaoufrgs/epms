@@ -53,7 +53,7 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
 
         if not on_frames.empty:
 
-            # print(f'\nOn frames\n============\n', on_frames)
+            print(f'\nOn frames\n============\n', on_frames)
 
             '''
             On frames
@@ -84,28 +84,22 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
 
                 # print(f'\nFrame {frame_number}\n=============\n', current_frame); input()
 
-
+                this_note_on_frames.append(frame_number)
                 # AQUI VAI SER A DIVISAO PELO TIPO DO DADO
 
-                if type(current_frame) is list:
+                if i_on_frame == len(on_frames)-1:
                     # play note
-                    if current_frame[0]:
+                    # if current_frame[0]:
                         # note start
-                        this_note_on_frames.append(frame_number)
-                    else:
-                        this_note_on_frames.append(frame_number)
-                        # note end
-                        beat_dur = len(this_note_on_frames) / SETTINGS.RESOLUTION
-                        note_obj.duration.quarterLength = abs(beat_dur)
-                        # get the start frame of the note
-                        beat_offset = (this_note_on_frames[0] * SETTINGS.RESOLUTION) % ts.numerator
-                        # insert into measure
-                        deserialized_measure.insert(beat_offset, note_obj)
-                        this_note_on_frames = []
-                else:
-                    # continue
                     this_note_on_frames.append(frame_number)
-
+                    # note end
+                    beat_dur = len(this_note_on_frames) / SETTINGS.RESOLUTION
+                    note_obj.duration.quarterLength = abs(beat_dur)
+                    # get the start frame of the note
+                    beat_offset = (this_note_on_frames[0] / SETTINGS.RESOLUTION)
+                    # insert into measure
+                    deserialized_measure.insert(beat_offset, note_obj)
+                    this_note_on_frames = []
     # transpose it back to the original ks
     deserialized_measure.transpose(transpose_int, inPlace=True)
 
@@ -118,6 +112,7 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
 
     # return it
     return deserialized_measure
+
 
 
 # deserialize a instrument line

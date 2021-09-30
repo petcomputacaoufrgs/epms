@@ -61,20 +61,22 @@ def measure2performance(measure, SETTINGS, ts_numerator):
 
     data = measure_data(measure)
 
-    keyboard_range = SETTINGS.KEYBOARD_SIZE + SETTINGS.KEYBOARD_OFFSET - 1
+    keyboard_range = SETTINGS.KEYBOARD_SIZE + SETTINGS.KEYBOARD_OFFSET
 
-    frames = [[False for i in range(SETTINGS.KEYBOARD_SIZE)] for j in range(ts_numerator * SETTINGS.RESOLUTION)]
+    frames = [[0 for i in range(SETTINGS.KEYBOARD_SIZE)] for j in range(ts_numerator * SETTINGS.RESOLUTION)]
 
     for item in data:
 
         # if item is a Rest, we can skip
         # since no key must be turned on
-        if isinstance(item, music21.note.Rest): pass
+        if isinstance(item, music21.note.Rest):
+            continue
 
         # if the item is a Note that is above
         # or below our keyboard range, we can skip
         # cause it will not be represented
-        if item.pitch.midi > keyboard_range: pass
+        if item.pitch.midi > keyboard_range:
+            continue
 
         # # # # # # # #
         # ITEM IS VALID
@@ -94,35 +96,36 @@ def measure2performance(measure, SETTINGS, ts_numerator):
 
         # start and end frames
         frame_s = int(item.offset * SETTINGS.RESOLUTION)
-        frame_e = int(frame_s + (item.duration.quarterLength * SETTINGS.RESOLUTION)) - 1
+        frame_e = int(frame_s + (item.duration.quarterLength * SETTINGS.RESOLUTION))
         # print(f'{frame_s}/{frame_e}')
 
         # note index on our keyboard
         i_key = item.pitch.midi - SETTINGS.KEYBOARD_OFFSET
-
+        velocity = item.volume.velocityScalar
         # turn them on captain!
         for frame in range(frame_s, frame_e):
             # print(f'{frame}/{frame_e}')
             # input()
-            velocity = item.volume.velocityScalar
+
             if velocity is not None:
-                if frame == frame_s:
-                    # first frame, play
-                    frames[frame][i_key] = (True, velocity)
-                    # print(frames[frame][i_key])
-                    # input()
-                elif frame == frame_e-1:
-                    # last frame, stop
-                    frames[frame][i_key] = (False, velocity)
-                    # print(frames[frame][i_key])
-                    # input()
-                else:
-                    # none, continue
-                    frames[frame][i_key] = velocity
-                    # print(frames[frame][i_key])
+                frames[frame][i_key] = velocity
+                # if frame == frame_s:
+                #     # first frame, play
+                #     frames[frame][i_key] = (True, velocity)
+                #     # print(frames[frame][i_key])
+                #     # input()
+                # elif frame == frame_e-1:
+                #     # last frame, stop
+                #     frames[frame][i_key] = (False, velocity)
+                #     # print(frames[frame][i_key])
+                #     # input()
+                # else:
+                #     # none, continue
+                #     frames[frame][i_key] = velocity
+                #     # print(frames[frame][i_key])
             else:
                 # no notes
-                frames[frame][i_key] = False
+                frames[frame][i_key] = 0
 
     # create Pandas dataframe
     note_names = [key_index2note(i, SETTINGS.KEYBOARD_OFFSET).nameWithOctave for i in range(0, SETTINGS.KEYBOARD_SIZE)]
@@ -332,7 +335,7 @@ def file(path, SETTINGS, save_as=None):
     if not isinstance(SETTINGS, pd.Series):
         SETTINGS = pd.Series(SETTINGS)
 
-    score = open_file(path)
+    # score = open_file(path)
     score = music21.converter.parse(path)
     print(f'Is well formed score? {music21.converter.parse(path).isWellFormedNotation()}')
     score = score.makeNotation()

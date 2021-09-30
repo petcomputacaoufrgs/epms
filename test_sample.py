@@ -43,9 +43,10 @@ SETTINGS = {
 # .Deacon Blues.mid                      -> KeyError: 52
 
 
-file = 'test_midi_files/George Benson - Breezin.mid'
+song_name = "All I Have To Do Is Dream (2003 Digital Remaster).mid"
+file = 'test_midi_files/' + song_name
 out_serialized_name = 'temp_files/serial.pkl'
-out_deserialized_name = 'temp_files/result.mid'
+out_deserialized_name = 'temp_files/result_' + song_name
 
 
 # Show original file as text
@@ -55,17 +56,16 @@ out_deserialized_name = 'temp_files/result.mid'
 # input()
 
 # Serialize data
-# print('Serializing...')
-# serialized = serialization.file(file,
-#                                 SETTINGS,
-#                                 save_as=out_serialized_name)
+print('Serializing...')
+serialized = serialization.file(file,
+                                SETTINGS,
+                                save_as=out_serialized_name)
 
-print('Getting serial...')
-serialized = pd.read_pickle(out_serialized_name)
-
+# print('Getting serial...')
+# serialized = pd.read_pickle(out_serialized_name)
 # print(serialized.to_string())
 
-interactive_debug_serial(serialized)
+# interactive_debug_serial(serialized)
 
 # Deserialize data
 print('\n\n\n\t << Deserializing... >> \n\n')
