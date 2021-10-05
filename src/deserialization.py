@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 import pandas as pd
 import music21
-from . import key_index2note, get_transpose_interval_from_C
+from . import key_index2note, get_transpose_interval_from_C, get_continuos
 
 #   Deserialise a single measure
 #
@@ -50,56 +50,57 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
         on_frames = met_perf_concat.loc[met_perf_concat.loc[:, measure_note] != False, measure_note]
         # on_frames.index += 1
         # print(f'\nOn frames\n============\n', on_frames)
-
         if not on_frames.empty:
-
-            # print(f'\nOn frames\n============\n', on_frames)
-
-            '''
-            On frames
-            ============
-             8      (True, 0.5039370078740157)
-            9                        0.503937
-            10    (False, 0.5039370078740157)
-            28     (True, 0.5039370078740157)
-            29                       0.503937
-            30    (False, 0.5039370078740157)
-            Name: A4, dtype: object
-            '''
-
             frames_indexes = on_frames.index
+            on_frames_list = get_continuos(frames_indexes)
+            # print(on_frames_list)
+            for frame_list in on_frames_list:
+                # print(f'\nFrame list\n============\n', frame_list)
 
-            # TODO: maybe we should set a threshold on what should become another note
-            # For example: if there's just one OFF frame between two ON frames, the OFF frame would be ignored
+                '''
+                On frames
+                ============
+                 8      (True, 0.5039370078740157)
+                9                        0.503937
+                10    (False, 0.5039370078740157)
+                28     (True, 0.5039370078740157)
+                29                       0.503937
+                30    (False, 0.5039370078740157)
+                Name: A4, dtype: object
+                '''
 
-            # declare note object
-            note_obj = music21.note.Note(nameWithOctave=measure_note)
 
-            this_note_on_frames = []
+                # TODO: maybe we should set a threshold on what should become another note
+                # For example: if there's just one OFF frame between two ON frames, the OFF frame would be ignored
 
-            # iterate over frames
-            for i_on_frame, current_frame in enumerate(on_frames):
+                # declare note object
+                note_obj = music21.note.Note(nameWithOctave=measure_note)
+                this_note_on_frames = []
 
-                frame_number = frames_indexes[i_on_frame]
+                # iterate over frames
+                for i_on_frame, current_frame in enumerate(frame_list):
 
-                # print(f'\nFrame {frame_number}\n=============\n', current_frame); input()
+                    frame_number = frame_list[i_on_frame]
 
-                this_note_on_frames.append(frame_number)
-                # AQUI VAI SER A DIVISAO PELO TIPO DO DADO
+                    # print(f'\nFrame {frame_number}\n=============\n', current_frame); input()
 
-                if i_on_frame == len(on_frames)-1:
-                    # play note
-                    # if current_frame[0]:
-                        # note start
                     this_note_on_frames.append(frame_number)
-                    # note end
-                    beat_dur = len(this_note_on_frames) / SETTINGS.RESOLUTION
-                    note_obj.duration.quarterLength = abs(beat_dur)
-                    # get the start frame of the note
-                    beat_offset = (this_note_on_frames[0] / SETTINGS.RESOLUTION)
-                    # insert into measure
-                    deserialized_measure.insert(beat_offset, note_obj)
-                    this_note_on_frames = []
+                    # AQUI VAI SER A DIVISAO PELO TIPO DO DADO
+
+                    if i_on_frame == len(frame_list)-1:
+                        # play note
+                        # if current_frame[0]:
+                            # note start
+                        # note end
+                        beat_dur = len(this_note_on_frames) / SETTINGS.RESOLUTION
+                        note_obj.duration.quarterLength = abs(beat_dur)
+                        # get the start frame of the note
+                        beat_offset = (this_note_on_frames[0] / SETTINGS.RESOLUTION)
+                        note_obj.offset = beat_offset
+                        # insert into measure
+                        # print(len(this_note_on_frames), beat_dur, beat_offset)
+                        deserialized_measure.insert(note_obj)
+                        this_note_on_frames = []
     # transpose it back to the original ks
     deserialized_measure.transpose(transpose_int, inPlace=True)
 

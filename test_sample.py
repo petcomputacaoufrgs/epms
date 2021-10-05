@@ -44,10 +44,10 @@ SETTINGS = {
 # .Deacon Blues.mid                      -> KeyError: 52
 
 
-song_name = "All I Have To Do is Dream (2003 Digital Remaster).mid"
+song_name = "crazy frog.mid"
 file = 'test_midi_files/' + song_name
 out_serialized_name = 'temp_files/serial.pkl'
-out_deserialized_name = 'temp_files/result_' + song_name
+out_deserialized_name = 'temp_files/result_agrvai' + song_name
 
 # Show original file as text
 # original = converter.parse(file).makeNotation().voicesToParts()
@@ -81,7 +81,7 @@ deserialized = deserialization.file(serialized,
                                     SETTINGS,
                                     save_as=out_deserialized_name)
 
-# deserialized.show('text')
+deserialized.show('text')
 # deserialized.plot()
 # input()
 
