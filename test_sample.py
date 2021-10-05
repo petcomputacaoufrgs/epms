@@ -1,3 +1,4 @@
+import music21.chord
 import pandas as pd
 from music21 import converter, environment
 import tabulate
@@ -43,16 +44,19 @@ SETTINGS = {
 # .Deacon Blues.mid                      -> KeyError: 52
 
 
-song_name = "All I Have To Do Is Dream (2003 Digital Remaster).mid"
+song_name = "All I Have To Do is Dream (2003 Digital Remaster).mid"
 file = 'test_midi_files/' + song_name
 out_serialized_name = 'temp_files/serial.pkl'
 out_deserialized_name = 'temp_files/result_' + song_name
 
-
 # Show original file as text
 # original = converter.parse(file).makeNotation().voicesToParts()
+# n = serialization.measure_data(original)
+# for n1 in n:
+#     print(n.offset)
 # original.plot()
 # original.show()
+# original.show("text")
 # input()
 
 # Serialize data
@@ -60,7 +64,11 @@ print('Serializing...')
 serialized = serialization.file(file,
                                 SETTINGS,
                                 save_as=out_serialized_name)
-
+# print(serialized.head(64).to_markdown())
+# print(serialized.loc[serialized["MEASURE"] == 24].to_markdown())
+# print(serialized.loc[serialized["MEASURE"] == 25].to_markdown())
+# print(serialized.loc[serialized["MEASURE"] == 26].to_markdown())
+# print(serialized.loc[serialized["MEASURE"] == 27].to_markdown())
 # print('Getting serial...')
 # serialized = pd.read_pickle(out_serialized_name)
 # print(serialized.to_string())
@@ -73,7 +81,7 @@ deserialized = deserialization.file(serialized,
                                     SETTINGS,
                                     save_as=out_deserialized_name)
 
-deserialized.show('text')
+# deserialized.show('text')
 # deserialized.plot()
 # input()
 

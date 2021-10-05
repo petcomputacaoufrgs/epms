@@ -46,7 +46,11 @@ def measure_data(measure):
             # print('data', data)
         elif isinstance(item, music21.chord.Chord):
             for p in item.pitches:
-                data.append(music21.note.Note(pitch=p))
+                n = music21.note.Note(pitch=p)
+                n.offset = item.offset
+                n.duration.quarterLength = item.duration.quarterLength
+                n.volume.velocityScalar = item.volume.velocityScalar
+                data.append(n)
                 # print('data', data)
 
     return data
@@ -60,11 +64,13 @@ def measure2performance(measure, SETTINGS, ts_numerator):
         SETTINGS = pd.Series(SETTINGS)
 
     data = measure_data(measure)
-
+    # for n in data:
+    #     print(n, n.offset, n.duration.quarterLength, end=', ')
+    # print()
+    # print(len(data))
     keyboard_range = SETTINGS.KEYBOARD_SIZE + SETTINGS.KEYBOARD_OFFSET
 
     frames = [[0 for i in range(SETTINGS.KEYBOARD_SIZE)] for j in range(ts_numerator * SETTINGS.RESOLUTION)]
-
     for item in data:
 
         # if item is a Rest, we can skip
@@ -98,7 +104,8 @@ def measure2performance(measure, SETTINGS, ts_numerator):
         frame_s = int(item.offset * SETTINGS.RESOLUTION)
         frame_e = int(frame_s + (item.duration.quarterLength * SETTINGS.RESOLUTION))
         # print(f'{frame_s}/{frame_e}')
-
+        # if frame_s == 56:
+        #     print(item.offset, item.pitch, item.duration.quarterLength)
         # note index on our keyboard
         i_key = item.pitch.midi - SETTINGS.KEYBOARD_OFFSET
         velocity = item.volume.velocityScalar
@@ -106,7 +113,6 @@ def measure2performance(measure, SETTINGS, ts_numerator):
         for frame in range(frame_s, frame_e):
             # print(f'{frame}/{frame_e}')
             # input()
-
             if velocity is not None:
                 frames[frame][i_key] = velocity
                 # if frame == frame_s:
@@ -125,6 +131,7 @@ def measure2performance(measure, SETTINGS, ts_numerator):
                 #     # print(frames[frame][i_key])
             else:
                 # no notes
+                # print(item.pitch, item.offset)
                 frames[frame][i_key] = 0
 
     # create Pandas dataframe
@@ -337,9 +344,11 @@ def file(path, SETTINGS, save_as=None):
 
     # score = open_file(path)
     score = music21.converter.parse(path)
-    print(f'Is well formed score? {music21.converter.parse(path).isWellFormedNotation()}')
+    # score.show("text")
+    print(f'Is well formed score? {score.isWellFormedNotation()}')
     score = score.makeNotation()
     score = score.expandRepeats()
+
     # score = music21.instrument.unbundleInstruments(score)
     # score.show('text')
     # input()

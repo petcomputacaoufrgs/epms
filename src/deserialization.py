@@ -53,7 +53,7 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
 
         if not on_frames.empty:
 
-            print(f'\nOn frames\n============\n', on_frames)
+            # print(f'\nOn frames\n============\n', on_frames)
 
             '''
             On frames
@@ -128,11 +128,11 @@ def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERF
     midi_program = INSTRUMENT_BLOCK.MIDI_PROGRAM
     inst_sound = INSTRUMENT_BLOCK.SOUND
 
-    print(f'\n====================',
-          f'\nPart name: {part_name}',
-          f'\nInstrument name: {inst_name}',
-          f'\nInstrument MIDI program: {midi_program}',
-          f'\nInstrument sound: {inst_sound}')
+    # print(f'\n====================',
+    #       f'\nPart name: {part_name}',
+    #       f'\nInstrument name: {inst_name}',
+    #       f'\nInstrument MIDI program: {midi_program}',
+    #       f'\nInstrument sound: {inst_sound}')
 
     # set instrument
     try:
@@ -142,8 +142,8 @@ def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERF
 
     # m21_inst.instrumentSound = inst_sound
 
-    print(f'\nMusic21 Instrument: {type(m21_inst)}',
-          f'\nInstrument sound: {m21_inst.instrumentSound}')
+    # print(f'\nMusic21 Instrument: {type(m21_inst)}',
+    #       f'\nInstrument sound: {m21_inst.instrumentSound}')
     # inst.autoAssignMidiChannel()
     deserialised_part.insert(0, m21_inst)
 
