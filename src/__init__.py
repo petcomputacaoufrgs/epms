@@ -1,7 +1,7 @@
 from music21 import interval, pitch, key, note
 import more_itertools as mit
 
-def get_continuos(on_frames):
+def get_continuous(on_frames):
     return [list(group) for group in mit.consecutive_groups(on_frames)]
 
 

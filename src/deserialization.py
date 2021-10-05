@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 import pandas as pd
 import music21
-from . import key_index2note, get_transpose_interval_from_C, get_continuos
+from . import key_index2note, get_transpose_interval_from_C, get_continuous
 
 #   Deserialise a single measure
 #
@@ -52,7 +52,7 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
         # print(f'\nOn frames\n============\n', on_frames)
         if not on_frames.empty:
             frames_indexes = on_frames.index
-            on_frames_list = get_continuos(frames_indexes)
+            on_frames_list = get_continuous(frames_indexes)
             # print(on_frames_list)
             for frame_list in on_frames_list:
                 # print(f'\nFrame list\n============\n', frame_list)

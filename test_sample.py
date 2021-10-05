@@ -44,7 +44,7 @@ SETTINGS = {
 # .Deacon Blues.mid                      -> KeyError: 52
 
 
-song_name = "crazy frog.mid"
+song_name = "Youre beautiful.mid"
 file = 'test_midi_files/' + song_name
 out_serialized_name = 'temp_files/serial.pkl'
 out_deserialized_name = 'temp_files/result_agrvai' + song_name
