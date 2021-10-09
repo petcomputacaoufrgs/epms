@@ -47,15 +47,19 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
         # print(f'\nMeasure note\n============\n', measure_note)
 
         # filter the frames where the current note is on
-        on_frames = met_perf_concat.loc[met_perf_concat.loc[:, measure_note] != False, measure_note]
-        # on_frames.index += 1
-        # print(f'\nOn frames\n============\n', on_frames)
+        on_frames = met_perf_concat.loc[met_perf_concat.loc[:, measure_note] != 0, measure_note]
         if not on_frames.empty:
-            frames_indexes = on_frames.index
-            on_frames_list = get_continuous(frames_indexes)
+            # print(f'\nOn frames\n============\n', on_frames)
+            # print(f'\nOn frames\n============\n', on_frames[:])
+            frames_volumes = [(list(on_frames)[i], list(on_frames.index)[i]) for i in range(len(on_frames))]
+            on_frames_list = get_continuous(frames_volumes)
+
             # print(on_frames_list)
             for frame_list in on_frames_list:
-                # print(f'\nFrame list\n============\n', frame_list)
+                # print('\nFrame list\n============\n', frame_list)
+                # print('\nFrame list index\n============\n', frame_list[0])
+                # print('\nOn frames\n============\n', on_frames)
+                # print('\nOn frames index\n============\n', on_frames.loc[frame_list[0]])
 
                 '''
                 On frames
@@ -72,33 +76,24 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
 
                 # TODO: maybe we should set a threshold on what should become another note
                 # For example: if there's just one OFF frame between two ON frames, the OFF frame would be ignored
-
                 # declare note object
                 note_obj = music21.note.Note(nameWithOctave=measure_note)
+                note_obj.volume.velocityScalar = frame_list[0][0]
                 this_note_on_frames = []
 
                 # iterate over frames
-                for i_on_frame, current_frame in enumerate(frame_list):
-
-                    frame_number = frame_list[i_on_frame]
-
-                    # print(f'\nFrame {frame_number}\n=============\n', current_frame); input()
-
-                    this_note_on_frames.append(frame_number)
-                    # AQUI VAI SER A DIVISAO PELO TIPO DO DADO
-
-                    if i_on_frame == len(frame_list)-1:
-                        # play note
-                        # if current_frame[0]:
-                            # note start
-                        # note end
-                        beat_dur = len(this_note_on_frames) / SETTINGS.RESOLUTION
-                        note_obj.duration.quarterLength = abs(beat_dur)
+                for volume_tuple in frame_list:
+                    # frame_number = frame_list[i_on_frame]
+                    this_note_on_frames.append(volume_tuple)
+                    # if it's the last frame, get the offset and the duration of the note
+                    if volume_tuple[1] == frame_list[-1][1]:
                         # get the start frame of the note
-                        beat_offset = (this_note_on_frames[0] / SETTINGS.RESOLUTION)
+                        beat_offset = (this_note_on_frames[0][1] / SETTINGS.RESOLUTION)
                         note_obj.offset = beat_offset
+                        # get the duration of the note
+                        beat_dur = len(this_note_on_frames) / SETTINGS.RESOLUTION
+                        note_obj.duration.quarterLength = beat_dur
                         # insert into measure
-                        # print(len(this_note_on_frames), beat_dur, beat_offset)
                         deserialized_measure.insert(note_obj)
                         this_note_on_frames = []
     # transpose it back to the original ks
@@ -129,24 +124,27 @@ def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERF
     midi_program = INSTRUMENT_BLOCK.MIDI_PROGRAM
     inst_sound = INSTRUMENT_BLOCK.SOUND
 
-    # print(f'\n====================',
-    #       f'\nPart name: {part_name}',
-    #       f'\nInstrument name: {inst_name}',
-    #       f'\nInstrument MIDI program: {midi_program}',
-    #       f'\nInstrument sound: {inst_sound}')
+    print(f'\n====================',
+          f'\nPart name: {part_name}',
+          f'\nInstrument name: {inst_name}',
+          f'\nInstrument MIDI program: {midi_program}',
+          f'\nInstrument sound: {inst_sound}')
 
     # set instrument
-    try:
-        m21_inst = music21.instrument.fromString(inst_name)
-    except:
-        m21_inst = music21.instrument.instrumentFromMidiProgram(midi_program)
-
+    # try:
+    #     m21_inst = music21.instrument.fromString(inst_name)
+    # except:
+    #     m21_inst = music21.instrument.instrumentFromMidiProgram(midi_program)
+    # print(m21_inst, inst_name)
     # m21_inst.instrumentSound = inst_sound
 
     # print(f'\nMusic21 Instrument: {type(m21_inst)}',
     #       f'\nInstrument sound: {m21_inst.instrumentSound}')
     # inst.autoAssignMidiChannel()
-    deserialised_part.insert(0, m21_inst)
+    try:
+        deserialised_part.insert(0, inst_name)
+    except:
+        deserialised_part.insert(0, music21.instrument.instrumentFromMidiProgram(midi_program))
 
     # total number of measures (bars)
     # in this part

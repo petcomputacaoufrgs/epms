@@ -1,8 +1,23 @@
 from music21 import interval, pitch, key, note
 import more_itertools as mit
 
-def get_continuous(on_frames):
-    return [list(group) for group in mit.consecutive_groups(on_frames)]
+def get_continuous(arr):
+    on_frames = []
+    pivot = 0
+    frame_list = [arr[pivot]]
+    for i in range(1, len(arr)):
+        if arr[i][1] == arr[i-1][1]+1 and arr[i][0] == arr[pivot][0]:
+            frame_list.append(arr[i])
+        else:
+            on_frames.append(frame_list)
+            frame_list = [arr[i]]
+            pivot = i
+        if i == len(arr)-1:
+            on_frames.append(frame_list)
+    return on_frames
+
+
+    # return [list(group) for group in mit.consecutive_groups(on_frames[1])]
 
 
 # Key index in our keyboard -> M21 Note

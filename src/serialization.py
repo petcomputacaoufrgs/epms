@@ -68,6 +68,7 @@ def measure2performance(measure, SETTINGS, ts_numerator):
     #     print(n, n.offset, n.duration.quarterLength, end=', ')
     # print()
     # print(len(data))
+    volume_flag = 1e-8
     keyboard_range = SETTINGS.KEYBOARD_SIZE + SETTINGS.KEYBOARD_OFFSET
 
     frames = [[0 for i in range(SETTINGS.KEYBOARD_SIZE)] for j in range(ts_numerator * SETTINGS.RESOLUTION)]
@@ -109,6 +110,8 @@ def measure2performance(measure, SETTINGS, ts_numerator):
         # note index on our keyboard
         i_key = item.pitch.midi - SETTINGS.KEYBOARD_OFFSET
         velocity = item.volume.velocityScalar
+        if frames[frame_s-1][i_key] == velocity:
+            velocity += volume_flag
         # turn them on captain!
         for frame in range(frame_s, frame_e):
             # print(f'{frame}/{frame_e}')
@@ -240,8 +243,13 @@ def instrument(part, SETTINGS, instrument_list=None):
     #           ======||||======
     part_name = part.partName
     m21_inst = part.getElementsByClass(music21.instrument.Instrument)[0]
-    inst_name = m21_inst.instrumentName
-
+    # inst_name = m21_inst.instrumentName
+    try:
+        inst_name = part.getElementsByClass(music21.instrument.Instrument)[1]
+    except:
+        inst_name = m21_inst.instrumentName
+    # print(part.getElementsByClass(music21.instrument.Instrument)[1])
+    # print(inst_name, part.getElementsByClass(music21.instrument.Instrument)[1])
     # This is a terminal case.
     #
     # Without the instrument name a lot of problems show up.
@@ -259,11 +267,11 @@ def instrument(part, SETTINGS, instrument_list=None):
         logging.warning('Could not retrieve Midi Program from instrument, setting it to default value 0 ({})'
                         .format(music21.instrument.instrumentFromMidiProgram(midi_program).instrumentName))
 
-    print(f'\n====================',
-          f'\nPart name: {part_name}',
-          f'\nPart instrument name: {inst_name}',
-          f'\nPart instrument MIDI program: {midi_program}',
-          f'\nInstrument sound: {inst_sound}')
+    # print(f'\n====================',
+    #       f'\nPart name: {part_name}',
+    #       f'\nPart instrument name: {inst_name}',
+    #       f'\nPart instrument MIDI program: {midi_program}',
+    #       f'\nInstrument sound: {inst_sound}')
 
     INSTRUMENT_BLOCK = pd.Series(
         {
