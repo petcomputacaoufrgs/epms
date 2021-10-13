@@ -2,6 +2,14 @@ from music21 import interval, pitch, key, note
 import more_itertools as mit
 
 def get_continuous(arr):
+    """Receives a list and returns a list of lists.
+    Each list is split given the following criteria:
+    1) The first element of each tuple of the list are the same
+    2) The second element of each tuple of the list are in crescent order and
+    Example:
+        [(1,1), (1,2), (2,3), (2,4), (1,6), (1,7), (1,8)] ->
+        [[(1, 1), (1, 2)], [(2, 3), (2, 4)], [(1, 6), (1, 7), (1, 8)]]
+        """
     on_frames = []
     pivot = 0
     frame_list = [arr[pivot]]
@@ -15,9 +23,6 @@ def get_continuous(arr):
         if i == len(arr)-1:
             on_frames.append(frame_list)
     return on_frames
-
-
-    # return [list(group) for group in mit.consecutive_groups(on_frames[1])]
 
 
 # Key index in our keyboard -> M21 Note

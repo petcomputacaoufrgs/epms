@@ -47,10 +47,9 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
         # print(f'\nMeasure note\n============\n', measure_note)
 
         # filter the frames where the current note is on
-        on_frames = met_perf_concat.loc[met_perf_concat.loc[:, measure_note] != 0, measure_note]
+        on_frames = met_perf_concat.loc[met_perf_concat.loc[:, measure_note] != False, measure_note]
         if not on_frames.empty:
             # print(f'\nOn frames\n============\n', on_frames)
-            # print(f'\nOn frames\n============\n', on_frames[:])
             frames_volumes = [(list(on_frames)[i], list(on_frames.index)[i]) for i in range(len(on_frames))]
             on_frames_list = get_continuous(frames_volumes)
 
@@ -78,7 +77,7 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
                 # For example: if there's just one OFF frame between two ON frames, the OFF frame would be ignored
                 # declare note object
                 note_obj = music21.note.Note(nameWithOctave=measure_note)
-                note_obj.volume.velocityScalar = frame_list[0][0]
+                # note_obj.volume.velocityScalar = frame_list[0][0]
                 this_note_on_frames = []
 
                 # iterate over frames
@@ -131,20 +130,21 @@ def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERF
           f'\nInstrument sound: {inst_sound}')
 
     # set instrument
-    # try:
-    #     m21_inst = music21.instrument.fromString(inst_name)
+    try:
+        m21_inst = music21.instrument.instrumentFromMidiProgram(midi_program)
+    except:
+        m21_inst = music21.instrument.fromString(inst_name)
+
     # except:
     #     m21_inst = music21.instrument.instrumentFromMidiProgram(midi_program)
     # print(m21_inst, inst_name)
-    # m21_inst.instrumentSound = inst_sound
+    m21_inst.instrumentSound = inst_sound
 
     # print(f'\nMusic21 Instrument: {type(m21_inst)}',
     #       f'\nInstrument sound: {m21_inst.instrumentSound}')
     # inst.autoAssignMidiChannel()
-    try:
-        deserialised_part.insert(0, inst_name)
-    except:
-        deserialised_part.insert(0, music21.instrument.instrumentFromMidiProgram(midi_program))
+    # print(music21.instrument.instrumentFromMidiProgram(midi_program), inst_name)
+    deserialised_part.insert(0, m21_inst)
 
     # total number of measures (bars)
     # in this part

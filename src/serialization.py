@@ -64,14 +64,10 @@ def measure2performance(measure, SETTINGS, ts_numerator):
         SETTINGS = pd.Series(SETTINGS)
 
     data = measure_data(measure)
-    # for n in data:
-    #     print(n, n.offset, n.duration.quarterLength, end=', ')
-    # print()
-    # print(len(data))
     volume_flag = 1e-8
     keyboard_range = SETTINGS.KEYBOARD_SIZE + SETTINGS.KEYBOARD_OFFSET
 
-    frames = [[0 for i in range(SETTINGS.KEYBOARD_SIZE)] for j in range(ts_numerator * SETTINGS.RESOLUTION)]
+    frames = [[False for i in range(SETTINGS.KEYBOARD_SIZE)] for j in range(ts_numerator * SETTINGS.RESOLUTION)]
     for item in data:
 
         # if item is a Rest, we can skip
@@ -104,38 +100,25 @@ def measure2performance(measure, SETTINGS, ts_numerator):
         # start and end frames
         frame_s = int(item.offset * SETTINGS.RESOLUTION)
         frame_e = int(frame_s + (item.duration.quarterLength * SETTINGS.RESOLUTION))
-        # print(f'{frame_s}/{frame_e}')
-        # if frame_s == 56:
-        #     print(item.offset, item.pitch, item.duration.quarterLength)
         # note index on our keyboard
         i_key = item.pitch.midi - SETTINGS.KEYBOARD_OFFSET
+        # velocity of the note
         velocity = item.volume.velocityScalar
-        if frames[frame_s-1][i_key] == velocity:
-            velocity += volume_flag
+        # if it's the first note of the bar, you don't need to check it
+        if frame_s > 0:
+            # if consecutive notes have the same speed, add a flag to differentiate them
+            if frames[frame_s-1][i_key] == velocity:
+                velocity += volume_flag
         # turn them on captain!
         for frame in range(frame_s, frame_e):
             # print(f'{frame}/{frame_e}')
             # input()
-            if velocity is not None:
+            if velocity is not None and velocity > 0:
                 frames[frame][i_key] = velocity
-                # if frame == frame_s:
-                #     # first frame, play
-                #     frames[frame][i_key] = (True, velocity)
-                #     # print(frames[frame][i_key])
-                #     # input()
-                # elif frame == frame_e-1:
-                #     # last frame, stop
-                #     frames[frame][i_key] = (False, velocity)
-                #     # print(frames[frame][i_key])
-                #     # input()
-                # else:
-                #     # none, continue
-                #     frames[frame][i_key] = velocity
-                #     # print(frames[frame][i_key])
             else:
                 # no notes
                 # print(item.pitch, item.offset)
-                frames[frame][i_key] = 0
+                frames[frame][i_key] = False
 
     # create Pandas dataframe
     note_names = [key_index2note(i, SETTINGS.KEYBOARD_OFFSET).nameWithOctave for i in range(0, SETTINGS.KEYBOARD_SIZE)]
@@ -242,22 +225,21 @@ def instrument(part, SETTINGS, instrument_list=None):
     #           INSTRUMENT BLOCK
     #           ======||||======
     part_name = part.partName
-    m21_inst = part.getElementsByClass(music21.instrument.Instrument)[0]
-    # inst_name = m21_inst.instrumentName
-    try:
-        inst_name = part.getElementsByClass(music21.instrument.Instrument)[1]
-    except:
-        inst_name = m21_inst.instrumentName
-    # print(part.getElementsByClass(music21.instrument.Instrument)[1])
-    # print(inst_name, part.getElementsByClass(music21.instrument.Instrument)[1])
+    inst_specs = part.getElementsByClass(music21.instrument.Instrument)[0]
+    m21_inst = part.getElementsByClass(music21.instrument.Instrument)[-1]
+    inst_name = m21_inst.instrumentName
+
+    print(inst_name, m21_inst)
     # This is a terminal case.
     #
     # Without the instrument name a lot of problems show up.
     # So, we will avoid this case for now
+    # print(inst_specs, type(inst_specs))
+    # print(inst_name, type(inst_name))
     if inst_name is None:
         return None
 
-    inst_sound = m21_inst.instrumentSound
+    inst_sound = inst_specs.instrumentSound
     instrument_list.append(inst_name)
 
     try:
@@ -267,11 +249,11 @@ def instrument(part, SETTINGS, instrument_list=None):
         logging.warning('Could not retrieve Midi Program from instrument, setting it to default value 0 ({})'
                         .format(music21.instrument.instrumentFromMidiProgram(midi_program).instrumentName))
 
-    # print(f'\n====================',
-    #       f'\nPart name: {part_name}',
-    #       f'\nPart instrument name: {inst_name}',
-    #       f'\nPart instrument MIDI program: {midi_program}',
-    #       f'\nInstrument sound: {inst_sound}')
+    print(f'\n====================',
+          f'\nPart name: {part_name}',
+          f'\nPart instrument name: {inst_name}',
+          f'\nPart instrument MIDI program: {midi_program}',
+          f'\nInstrument sound: {inst_sound}')
 
     INSTRUMENT_BLOCK = pd.Series(
         {
