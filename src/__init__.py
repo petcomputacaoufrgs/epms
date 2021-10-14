@@ -1,41 +1,44 @@
 from music21 import interval, pitch, key, note
-import more_itertools as mit
+
 
 def get_continuous(arr):
-    """Receives a list and returns a list of lists.
+    """Receives a list of tuples and returns a list of lists of tuples.
     Each list is split given the following criteria:
     1) The first element of each tuple of the list are the same
     2) The second element of each tuple of the list are in crescent order and
     Example:
         [(1,1), (1,2), (2,3), (2,4), (1,6), (1,7), (1,8)] ->
         [[(1, 1), (1, 2)], [(2, 3), (2, 4)], [(1, 6), (1, 7), (1, 8)]]
-        """
+    """
     on_frames = []
     pivot = 0
     frame_list = [arr[pivot]]
     for i in range(1, len(arr)):
+        # if it meets the criteria
         if arr[i][1] == arr[i-1][1]+1 and arr[i][0] == arr[pivot][0]:
             frame_list.append(arr[i])
+        # create a new list
         else:
             on_frames.append(frame_list)
             frame_list = [arr[i]]
             pivot = i
+        # if it's the last element you have to append the list or you'll lose it
         if i == len(arr)-1:
             on_frames.append(frame_list)
     return on_frames
 
 
-# Key index in our keyboard -> M21 Note
 def key_index2note(i, midi_offset):
+    """ Receives the key index and the midi offset of the keyboard and returns a M21 Note"""
     index = i + midi_offset
     n = note.Note(midi=index)
     return n
 
 
-# return tuple (key, transposed_stream)
-#
-# (label, key)
 def transpose_stream_to_C(stream, force_eval=False):
+    """Transpose a stream to C major, if it's in a major key, or to A minor, if it's in a minor key
+    Returns a tuple in the format (key, transposed_stream)"""
+
     # trying to capture a M21 Key object in the stream
     stream_key = stream.getElementsByClass(key.Key)
     if len(stream_key) != 0:
@@ -87,6 +90,7 @@ def get_transpose_interval_from_C(ks):
 
 
 def interactive_debug_serial(serialized):
+    """Interactive debugger of the serialized stackframe"""
     serial_instruments = list(enumerate(set(serialized.index)))
 
     stop = False
@@ -123,4 +127,3 @@ def interactive_debug_serial(serialized):
                 measure_view = True
                 stop = False
 
-        # print(f'Serial of instrument {sel_inst_name}:\n ', target_instrument.to_string())

@@ -1,65 +1,24 @@
 import logging
-import os
-import time
 import pandas as pd
-import numpy as np
 import music21
-from pathlib import Path
 from . import key_index2note, transpose_stream_to_C
-# open and read file
-#
-# MIDI -> M21 Score
-def open_file(midi_path, no_drums=True):
-    # declare and read
-    mf = music21.midi.MidiFile()
-    mf.open(midi_path)
-
-    # score = music21.converter.parse(midi_path).makeNotation().voicesToParts()
-
-    if mf.format not in [0, 1]:
-        # m21 cant read
-        logging.warning('Music21 cant open format {} MIDI files. Skipping.'.format(mf.format))
-        return None
-
-    mf.read()
-    mf.close()
-
-    # if no_drums is on, we'll remove the drums
-    if no_drums:
-        for i in range(0, len(mf.tracks)):
-            mf.tracks[i].events = [ev for ev in mf.tracks[i].events if ev.channel != 10]
-
-    score = music21.midi.translate.midiFileToStream(mf)
-    score = score.makeNotation()
-    score = score.voicesToParts()
-
-    return score
 
 
-# get all notes from m21 obj
 def measure_data(measure):
+    """Receives a measure, and returns all notes from that measure in a list"""
     items = measure.flat.notes
     data = []
     for item in items:
         if isinstance(item, music21.note.Note) or isinstance(item, music21.note.Rest):
             data.append(item)
-            # print('data', data)
         elif isinstance(item, music21.chord.Chord):
-            for p in item.pitches:
-                n = music21.note.Note(pitch=p)
-                n.offset = item.offset
-                n.duration.quarterLength = item.duration.quarterLength
-                n.volume.velocityScalar = item.volume.velocityScalar
+            for n in item:
                 data.append(n)
-                # print('data', data)
-
     return data
 
 
-# extract frames from measure
-#
-#  M21 Measure -> Multi Hot Encoding
 def measure2performance(measure, SETTINGS, ts_numerator):
+    """Receives a measure and returns it in a multi hot encoding form"""
     if not isinstance(SETTINGS, pd.Series):
         SETTINGS = pd.Series(SETTINGS)
 
@@ -111,13 +70,11 @@ def measure2performance(measure, SETTINGS, ts_numerator):
                 velocity += volume_flag
         # turn them on captain!
         for frame in range(frame_s, frame_e):
-            # print(f'{frame}/{frame_e}')
             # input()
-            if velocity is not None and velocity > 0:
+            if velocity is not None:
                 frames[frame][i_key] = velocity
             else:
                 # no notes
-                # print(item.pitch, item.offset)
                 frames[frame][i_key] = False
 
     # create Pandas dataframe
@@ -133,6 +90,7 @@ def measure2performance(measure, SETTINGS, ts_numerator):
 #
 # M21 Measure -> Pandas DataFrame
 def measure(m_number, m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK):
+    """Returns """
     if not isinstance(SETTINGS, pd.Series):
         SETTINGS = pd.Series(SETTINGS)
 
@@ -156,11 +114,6 @@ def measure(m_number, m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK):
     m_ts = m.getTimeSignatures()
     if len(m_ts) != 0:
         m_ts = m_ts[0]
-        # if m_ts != ENVIRONMENT_BLOCK.TS:
-        #     # ts changed
-        #     if m_ts.ratioString != '4/4':
-        #         logging.warning('Found measure not in 4/4, skipping.')
-        #         return None
     else:
         m_ts = ENVIRONMENT_BLOCK.TS
 
@@ -175,7 +128,6 @@ def measure(m_number, m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK):
     beat_counter = [(int(i // SETTINGS.RESOLUTION) + 1) for i in range(SETTINGS.RESOLUTION * m_ts.numerator)]
     frame_counter = [(int(i % SETTINGS.RESOLUTION) + 1) for i in range(SETTINGS.RESOLUTION * m_ts.numerator)]
 
-    # print(len(measure_counter), len(beat_counter), len(frame_counter))
 
     metric_bl = pd.DataFrame(
         {
@@ -190,14 +142,7 @@ def measure(m_number, m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK):
                                   m_ts.numerator)
 
     inst_bl = pd.concat([INSTRUMENT_BLOCK] * (m_ts.numerator * SETTINGS.RESOLUTION), axis=1).T
-
     env_bl = pd.concat([ENVIRONMENT_BLOCK] * (m_ts.numerator * SETTINGS.RESOLUTION), axis=1).T
-    # env_df = env_df.reshape(len(ENVIRONMENT_BLOCK), SETTINGS.RESOLUTION)
-
-    # print(f'INST DF: \n\n {inst_df.to_string()} \n Shape {inst_df.shape}\n')
-    # print(f'ENV DF: \n\n {env_df.to_string()} \n Shape {env_df.shape}\n')
-    # print(f'PERFORMANCE DF: \n\n {stackframe.to_string()} \n Shape {stackframe.shape}\n')
-
     encoded_measure = pd.concat([inst_bl, metric_bl, env_bl, perf_bl], axis=1)
 
     return encoded_measure
@@ -229,13 +174,9 @@ def instrument(part, SETTINGS, instrument_list=None):
     m21_inst = part.getElementsByClass(music21.instrument.Instrument)[-1]
     inst_name = m21_inst.instrumentName
 
-    print(inst_name, m21_inst)
     # This is a terminal case.
-    #
     # Without the instrument name a lot of problems show up.
     # So, we will avoid this case for now
-    # print(inst_specs, type(inst_specs))
-    # print(inst_name, type(inst_name))
     if inst_name is None:
         return None
 
@@ -332,29 +273,11 @@ def file(path, SETTINGS, save_as=None):
     if not isinstance(SETTINGS, pd.Series):
         SETTINGS = pd.Series(SETTINGS)
 
-    # score = open_file(path)
     score = music21.converter.parse(path)
-    # score.show("text")
-    print(f'Is well formed score? {score.isWellFormedNotation()}')
     score = score.makeNotation()
     score = score.expandRepeats()
 
-    # score = music21.instrument.unbundleInstruments(score)
-    # score.show('text')
-    # input()
-
-    # meta = score.metadata
     instrument_list = []
-
-    # score.show('text')
-    # input()
-
-    parts_in_score = music21.instrument.partitionByInstrument(score).parts
-    # parts_in_score = score.parts
-
-    # print('Instruments in file: {}'.format(len(score.parts)))
-    # input()
-
     serialised_parts = []
 
     # for part in parts_in_score:

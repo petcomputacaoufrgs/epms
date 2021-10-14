@@ -135,9 +135,6 @@ def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERF
     except:
         m21_inst = music21.instrument.fromString(inst_name)
 
-    # except:
-    #     m21_inst = music21.instrument.instrumentFromMidiProgram(midi_program)
-    # print(m21_inst, inst_name)
     m21_inst.instrumentSound = inst_sound
 
     # print(f'\nMusic21 Instrument: {type(m21_inst)}',
