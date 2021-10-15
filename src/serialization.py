@@ -46,7 +46,11 @@ def measure_data(measure):
             # print('data', data)
         elif isinstance(item, music21.chord.Chord):
             for p in item.pitches:
-                data.append(music21.note.Note(pitch=p))
+                n = music21.note.Note(pitch=p)
+                n.offset = item.offset
+                n.duration.quarterLength = item.duration.quarterLength
+                n.volume.velocityScalar = item.volume.velocityScalar
+                data.append(n)
                 # print('data', data)
 
     return data
@@ -60,11 +64,10 @@ def measure2performance(measure, SETTINGS, ts_numerator):
         SETTINGS = pd.Series(SETTINGS)
 
     data = measure_data(measure)
-
+    volume_flag = 1e-8
     keyboard_range = SETTINGS.KEYBOARD_SIZE + SETTINGS.KEYBOARD_OFFSET
 
-    frames = [[0 for i in range(SETTINGS.KEYBOARD_SIZE)] for j in range(ts_numerator * SETTINGS.RESOLUTION)]
-
+    frames = [[False for i in range(SETTINGS.KEYBOARD_SIZE)] for j in range(ts_numerator * SETTINGS.RESOLUTION)]
     for item in data:
 
         # if item is a Rest, we can skip
@@ -97,35 +100,25 @@ def measure2performance(measure, SETTINGS, ts_numerator):
         # start and end frames
         frame_s = int(item.offset * SETTINGS.RESOLUTION)
         frame_e = int(frame_s + (item.duration.quarterLength * SETTINGS.RESOLUTION))
-        # print(f'{frame_s}/{frame_e}')
-
         # note index on our keyboard
         i_key = item.pitch.midi - SETTINGS.KEYBOARD_OFFSET
+        # velocity of the note
         velocity = item.volume.velocityScalar
+        # if it's the first note of the bar, you don't need to check it
+        if frame_s > 0:
+            # if consecutive notes have the same speed, add a flag to differentiate them
+            if frames[frame_s-1][i_key] == velocity:
+                velocity += volume_flag
         # turn them on captain!
         for frame in range(frame_s, frame_e):
             # print(f'{frame}/{frame_e}')
             # input()
-
-            if velocity is not None:
+            if velocity is not None and velocity > 0:
                 frames[frame][i_key] = velocity
-                # if frame == frame_s:
-                #     # first frame, play
-                #     frames[frame][i_key] = (True, velocity)
-                #     # print(frames[frame][i_key])
-                #     # input()
-                # elif frame == frame_e-1:
-                #     # last frame, stop
-                #     frames[frame][i_key] = (False, velocity)
-                #     # print(frames[frame][i_key])
-                #     # input()
-                # else:
-                #     # none, continue
-                #     frames[frame][i_key] = velocity
-                #     # print(frames[frame][i_key])
             else:
                 # no notes
-                frames[frame][i_key] = 0
+                # print(item.pitch, item.offset)
+                frames[frame][i_key] = False
 
     # create Pandas dataframe
     note_names = [key_index2note(i, SETTINGS.KEYBOARD_OFFSET).nameWithOctave for i in range(0, SETTINGS.KEYBOARD_SIZE)]
@@ -232,17 +225,21 @@ def instrument(part, SETTINGS, instrument_list=None):
     #           INSTRUMENT BLOCK
     #           ======||||======
     part_name = part.partName
-    m21_inst = part.getElementsByClass(music21.instrument.Instrument)[0]
+    inst_specs = part.getElementsByClass(music21.instrument.Instrument)[0]
+    m21_inst = part.getElementsByClass(music21.instrument.Instrument)[-1]
     inst_name = m21_inst.instrumentName
 
+    print(inst_name, m21_inst)
     # This is a terminal case.
     #
     # Without the instrument name a lot of problems show up.
     # So, we will avoid this case for now
+    # print(inst_specs, type(inst_specs))
+    # print(inst_name, type(inst_name))
     if inst_name is None:
         return None
 
-    inst_sound = m21_inst.instrumentSound
+    inst_sound = inst_specs.instrumentSound
     instrument_list.append(inst_name)
 
     try:
@@ -337,9 +334,11 @@ def file(path, SETTINGS, save_as=None):
 
     # score = open_file(path)
     score = music21.converter.parse(path)
-    print(f'Is well formed score? {music21.converter.parse(path).isWellFormedNotation()}')
+    # score.show("text")
+    print(f'Is well formed score? {score.isWellFormedNotation()}')
     score = score.makeNotation()
     score = score.expandRepeats()
+
     # score = music21.instrument.unbundleInstruments(score)
     # score.show('text')
     # input()
