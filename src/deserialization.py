@@ -77,7 +77,6 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
                 # For example: if there's just one OFF frame between two ON frames, the OFF frame would be ignored
                 # declare note object
                 note_obj = music21.note.Note(nameWithOctave=measure_note)
-                # note_obj.volume.velocityScalar = frame_list[0][0]
                 this_note_on_frames = []
 
                 # iterate over frames
@@ -86,6 +85,8 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
                     this_note_on_frames.append(volume_tuple)
                     # if it's the last frame, get the offset and the duration of the note
                     if volume_tuple[1] == frame_list[-1][1]:
+                        # get the volume of th enote
+                        note_obj.volume.velocityScalar = volume_tuple[0]
                         # get the start frame of the note
                         beat_offset = (this_note_on_frames[0][1] / SETTINGS.RESOLUTION)
                         note_obj.offset = beat_offset
