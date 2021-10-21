@@ -90,7 +90,7 @@ def get_transpose_interval_from_C(ks):
 
 
 def interactive_debug_serial(serialized):
-    """Interactive debugger of the serialized stackframe"""
+    """Interactive debugger of the serialized dataframe"""
     serial_instruments = list(enumerate(set(serialized.index)))
 
     stop = False
@@ -116,14 +116,11 @@ def interactive_debug_serial(serialized):
             # single measure
             measure_s = input('\nEnter number of measure to show: #')
             if measure_s.upper() == '':
-                measure_view = False; stop = False;
+                measure_view = False
+                stop = False
             else:
                 measure_s = int(measure_s)
-
-                # measure_e = measure_s
-                # measures = target_instrument[target_instrument['MEASURE'].between(measure_s, measure_e, inclusive=True)]
                 measures = target_instrument[target_instrument['MEASURE'] == measure_s]
                 print(measures.to_markdown())
                 measure_view = True
                 stop = False
-

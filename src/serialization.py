@@ -12,7 +12,11 @@ def measure_data(measure):
         if isinstance(item, music21.note.Note) or isinstance(item, music21.note.Rest):
             data.append(item)
         elif isinstance(item, music21.chord.Chord):
-            for n in item:
+            for p in item.pitches:
+                n = music21.note.Note(pitch=p)
+                n.offset = item.offset
+                n.duration.quarterLength = item.duration.quarterLength
+                n.volume.velocityScalar = item.volume.velocityScalar
                 data.append(n)
     return data
 
@@ -70,7 +74,6 @@ def measure2performance(measure, SETTINGS, ts_numerator):
                 velocity += volume_flag
         # turn them on captain!
         for frame in range(frame_s, frame_e):
-            # input()
             if velocity is not None:
                 frames[frame][i_key] = velocity
             else:
@@ -86,15 +89,11 @@ def measure2performance(measure, SETTINGS, ts_numerator):
     return stackframe
 
 
-# Serialise a single measure
-#
 # M21 Measure -> Pandas DataFrame
 def measure(m_number, m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK):
-    """Returns """
+    """Serialise a single measure"""
     if not isinstance(SETTINGS, pd.Series):
         SETTINGS = pd.Series(SETTINGS)
-
-    # TODO: ligadura, conectar duas measures e somar as durações
 
     # check for key changes
     m_ks, transposed_measure = transpose_stream_to_C(m, force_eval=False)
@@ -148,10 +147,9 @@ def measure(m_number, m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK):
     return encoded_measure
 
 
-# Serialise a single instrument/part
-#
 # M21 Part -> Pandas DataFrame
-def instrument(part, SETTINGS, instrument_list=None):
+def instrument(part, SETTINGS, part_list=None):
+    """Serialise a single instrument/part"""
     #
     #   INSTRUMENT BLOCK
     #
@@ -165,7 +163,6 @@ def instrument(part, SETTINGS, instrument_list=None):
     #   ========================
     #       DEFINING BLOCKS
     #       ===============
-
 
     #           INSTRUMENT BLOCK
     #           ======||||======
@@ -181,7 +178,11 @@ def instrument(part, SETTINGS, instrument_list=None):
         return None
 
     inst_sound = inst_specs.instrumentSound
-    instrument_list.append(inst_name)
+
+    # to avoid the problem of having parts with the same name
+    while part_name in part_list:
+        part_name += "'"
+    part_list.append(part_name)
 
     try:
         midi_program = m21_inst.midiProgram
@@ -189,12 +190,6 @@ def instrument(part, SETTINGS, instrument_list=None):
         midi_program = 0
         logging.warning('Could not retrieve Midi Program from instrument, setting it to default value 0 ({})'
                         .format(music21.instrument.instrumentFromMidiProgram(midi_program).instrumentName))
-
-    print(f'\n====================',
-          f'\nPart name: {part_name}',
-          f'\nPart instrument name: {inst_name}',
-          f'\nPart instrument MIDI program: {midi_program}',
-          f'\nInstrument sound: {inst_sound}')
 
     INSTRUMENT_BLOCK = pd.Series(
         {
@@ -228,7 +223,6 @@ def instrument(part, SETTINGS, instrument_list=None):
         ts = time_signature[0]
 
     # transpose song to C major/A minor
-    # original_ks, transposed_part = transpose_stream_to_C(part, force_eval=False)
     original_ks, transposed_part = transpose_stream_to_C(part, force_eval=True)
 
     n_measures = len(part) + 1
@@ -265,11 +259,9 @@ def instrument(part, SETTINGS, instrument_list=None):
     return part_df
 
 
-# Serialise a .mid file
-#
 # MIDI -> Interpretation (Pandas DataFrame)
-
 def file(path, SETTINGS, save_as=None):
+    """Serialise a .mid file"""
     if not isinstance(SETTINGS, pd.Series):
         SETTINGS = pd.Series(SETTINGS)
 
@@ -277,15 +269,14 @@ def file(path, SETTINGS, save_as=None):
     score = score.makeNotation()
     score = score.expandRepeats()
 
-    instrument_list = []
+    part_list = []
     serialised_parts = []
 
-    # for part in parts_in_score:
     for part in score.parts:
         serialised_parts.append(
             instrument(part,
                        SETTINGS,
-                       instrument_list)
+                       part_list)
         )
 
     serialised_df = pd.concat([*serialised_parts], axis=0)
