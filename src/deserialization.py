@@ -1,6 +1,6 @@
 import pandas as pd
 import music21
-from . import get_transpose_interval_from_C, get_continuous
+from aux_functions import get_transpose_interval_from_C, get_continuous
 
 
 def measure(m_metric, m_environment, m_performance, SETTINGS):
