@@ -1,12 +1,13 @@
 from music21 import interval, pitch, key, note
 from bisect import bisect_left
 
-
+# https://stackoverflow.com/questions/12141150/from-list-of-integers-get-number-closest-to-a-given-value
 def take_closest(myList, myNumber):
     """
     Assumes myList is sorted. Returns closest value to myNumber.
 
     If two numbers are equally close, return the smallest number.
+
     """
     pos = bisect_left(myList, myNumber)
     if pos == 0:

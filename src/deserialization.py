@@ -82,11 +82,7 @@ def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERF
     inst_sound = INSTRUMENT_BLOCK.SOUND
 
     # set instrument
-    try:
-        m21_inst = music21.instrument.instrumentFromMidiProgram(midi_program)
-    except:
-        m21_inst = music21.instrument.fromString(inst_name)
-
+    m21_inst = music21.instrument.instrumentFromMidiProgram(midi_program)
     m21_inst.instrumentSound = inst_sound
 
     deserialized_part.insert(0, m21_inst)
@@ -133,7 +129,6 @@ def file(serialised, SETTINGS, save_as=None):
     # get a list of unique instruments in the song
     instruments_list = list(set(serialised.index))
     instruments = [serialised.loc[i] for i in instruments_list]
-
     # separate song parts by instrument
     for serial in instruments:
         #   RETRIEVE BLOCKS

@@ -207,7 +207,7 @@ def instrument(part, SETTINGS, part_list=None, to_bins=False):
             'SOUND': inst_sound
         }
     )
-
+    #
     #           ENVIRONMENT BLOCK
     #            ======||||======
 
