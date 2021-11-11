@@ -67,8 +67,7 @@ def measure2performance(measure, SETTINGS, ts_numerator, to_bins=False):
         # note index on our keyboard
         i_key = item.pitch.midi - SETTINGS.KEYBOARD_OFFSET
         # velocity of the note
-        interval_list = [i / 127 for i in range(16, 128, 16)]
-        interval_list.append(1)
+        interval_list = [i / 128 for i in range(16, 128, 16)]
         velocity = item.volume.velocityScalar
         if to_bins:
             velocity = take_closest(interval_list, velocity)
@@ -80,7 +79,6 @@ def measure2performance(measure, SETTINGS, ts_numerator, to_bins=False):
         # turn them on captain!
         for frame in range(frame_s, frame_e):
             if velocity is not None:
-                # print(len(frames))
                 # print(frame, i_key, velocity)
                 frames[frame][i_key] = velocity
             else:
