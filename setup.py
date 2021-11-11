@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="EPMS",
-    version="0.0.1",
+    version="0.0.3",
     author="PET Computação UFRGS",
     author_email="pet@inf.ufrgs.br",
     description="The Expressive Polyphonic MIDI Serializer is a tool to turn MIDI files into a model-friendly, expressive representation for ML projects.",
