@@ -1,6 +1,43 @@
 import pandas as pd
 import music21
-from aux_functions import get_transpose_interval_from_C, get_continuous
+
+
+def get_transpose_interval_from_C(ks):
+    if ks is None:
+        return None
+
+    if ks != 'C' and ks != 'a':
+        if ks.mode == 'major':
+            return music21.interval.Interval(music21.pitch.Pitch('C'), ks.tonic)
+        elif ks.mode == 'minor':
+            return music21.interval.Interval(music21.pitch.Pitch('a'), ks.tonic)
+
+
+def get_continuous(arr):
+    """Receives a list of tuples and returns a list of lists of tuples.
+    Each list is split given the following criteria:
+    1) The first element of each tuple of the list are the same
+    2) The second element of each tuple of the list are in crescent order and
+    Example:
+        [(1,1), (1,2), (2,3), (2,4), (1,6), (1,7), (1,8)] ->
+        [[(1, 1), (1, 2)], [(2, 3), (2, 4)], [(1, 6), (1, 7), (1, 8)]]
+    """
+    on_frames = []
+    pivot = 0
+    frame_list = [arr[pivot]]
+    for i in range(1, len(arr)):
+        # if it meets the criteria
+        if arr[i][1] == arr[i-1][1]+1 and arr[i][0] == arr[pivot][0]:
+            frame_list.append(arr[i])
+        # create a new list
+        else:
+            on_frames.append(frame_list)
+            frame_list = [arr[i]]
+            pivot = i
+        # if it's the last element you have to append the list or you'll lose it
+        if i == len(arr)-1:
+            on_frames.append(frame_list)
+    return on_frames
 
 
 def measure(m_metric, m_environment, m_performance, SETTINGS):
