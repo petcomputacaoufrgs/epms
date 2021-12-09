@@ -3,6 +3,12 @@ import pandas as pd
 import music21
 from bisect import bisect_left
 
+SETTINGS = {
+    'RESOLUTION': 16,
+    'KEYBOARD_SIZE': 88,
+    'KEYBOARD_OFFSET': 21
+}
+
 
 def interactive_debug_serial(serialized):
     """Interactive debugger of the serialized dataframe"""
@@ -128,16 +134,16 @@ def measure_data(measure):
     return data
 
 
-def measure2performance(measure, SETTINGS, ts_numerator, to_bins=False):
+def measure2performance(measure, settings, ts_numerator, to_bins=False):
     """Receives a measure and returns it in a multi hot encoding form"""
-    if not isinstance(SETTINGS, pd.Series):
-        SETTINGS = pd.Series(SETTINGS)
+    if not isinstance(settings, pd.Series):
+        settings = pd.Series(settings)
 
     data = measure_data(measure)
     volume_flag = 1e-8
-    keyboard_range = SETTINGS.KEYBOARD_SIZE + SETTINGS.KEYBOARD_OFFSET
+    keyboard_range = settings.KEYBOARD_SIZE + settings.KEYBOARD_OFFSET
 
-    frames = [[False for i in range(SETTINGS.KEYBOARD_SIZE)] for j in range(ts_numerator * SETTINGS.RESOLUTION)]
+    frames = [[False for i in range(settings.KEYBOARD_SIZE)] for j in range(ts_numerator * settings.RESOLUTION)]
     for item in data:
 
         # if item is a Rest, we can skip
@@ -168,10 +174,10 @@ def measure2performance(measure, SETTINGS, ts_numerator, to_bins=False):
         # the measure
 
         # start and end frames
-        frame_s = int(item.offset * SETTINGS.RESOLUTION)
-        frame_e = int(frame_s + (item.duration.quarterLength * SETTINGS.RESOLUTION))
+        frame_s = int(item.offset * settings.RESOLUTION)
+        frame_e = int(frame_s + (item.duration.quarterLength * settings.RESOLUTION))
         # note index on our keyboard
-        i_key = item.pitch.midi - SETTINGS.KEYBOARD_OFFSET
+        i_key = item.pitch.midi - settings.KEYBOARD_OFFSET
         # velocity of the note
         interval_list = [i / 128 for i in range(16, 128, 16)]
         velocity = item.volume.velocityScalar
@@ -192,19 +198,19 @@ def measure2performance(measure, SETTINGS, ts_numerator, to_bins=False):
                 frames[frame][i_key] = False
 
     # create Pandas dataframe
-    note_names = [key_index2note(i, SETTINGS.KEYBOARD_OFFSET).nameWithOctave for i in range(0, SETTINGS.KEYBOARD_SIZE)]
+    note_names = [key_index2note(i, settings.KEYBOARD_OFFSET).nameWithOctave for i in range(0, settings.KEYBOARD_SIZE)]
 
-    frame_counter = [int(i) for i in range(0, ts_numerator * SETTINGS.RESOLUTION)]
+    frame_counter = [int(i) for i in range(0, ts_numerator * settings.RESOLUTION)]
     stackframe = pd.DataFrame(frames, index=frame_counter, columns=note_names)
 
     return stackframe
 
 
 # M21 Measure -> Pandas DataFrame
-def measure(m_number, m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK, to_bins=False):
+def measure(m_number, m, settings, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK, to_bins=False):
     """Serialise a single measure"""
-    if not isinstance(SETTINGS, pd.Series):
-        SETTINGS = pd.Series(SETTINGS)
+    if not isinstance(settings, pd.Series):
+        settings = pd.Series(settings)
 
     # check for key changes
     m_ks, transposed_measure = transpose_stream_to_C(m, force_eval=False)
@@ -234,9 +240,9 @@ def measure(m_number, m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK, to_bins=
 
     #             METRIC BLOCK
     #           ======||||======
-    measure_counter = [int(m_number) for i in range(SETTINGS.RESOLUTION * m_ts.numerator)]
-    beat_counter = [(int(i // SETTINGS.RESOLUTION) + 1) for i in range(SETTINGS.RESOLUTION * m_ts.numerator)]
-    frame_counter = [(int(i % SETTINGS.RESOLUTION) + 1) for i in range(SETTINGS.RESOLUTION * m_ts.numerator)]
+    measure_counter = [int(m_number) for i in range(settings.RESOLUTION * m_ts.numerator)]
+    beat_counter = [(int(i // settings.RESOLUTION) + 1) for i in range(settings.RESOLUTION * m_ts.numerator)]
+    frame_counter = [(int(i % settings.RESOLUTION) + 1) for i in range(settings.RESOLUTION * m_ts.numerator)]
 
 
     metric_bl = pd.DataFrame(
@@ -248,26 +254,26 @@ def measure(m_number, m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK, to_bins=
     )
 
     perf_bl = measure2performance(transposed_measure,
-                                  SETTINGS,
+                                  settings,
                                   m_ts.numerator,
                                   to_bins)
 
-    inst_bl = pd.concat([INSTRUMENT_BLOCK] * (m_ts.numerator * SETTINGS.RESOLUTION), axis=1).T
-    env_bl = pd.concat([ENVIRONMENT_BLOCK] * (m_ts.numerator * SETTINGS.RESOLUTION), axis=1).T
+    inst_bl = pd.concat([INSTRUMENT_BLOCK] * (m_ts.numerator * settings.RESOLUTION), axis=1).T
+    env_bl = pd.concat([ENVIRONMENT_BLOCK] * (m_ts.numerator * settings.RESOLUTION), axis=1).T
     encoded_measure = pd.concat([inst_bl, metric_bl, env_bl, perf_bl], axis=1)
 
     return encoded_measure
 
 
 # M21 Part -> Pandas DataFrame
-def instrument(part, SETTINGS, part_list=None, to_bins=False):
+def instrument(part, settings, part_list=None, to_bins=False):
     """Serialise a single instrument/part"""
     #
     #   INSTRUMENT BLOCK
     #
 
-    if not isinstance(SETTINGS, pd.Series):
-        SETTINGS = pd.Series(SETTINGS)
+    if not isinstance(settings, pd.Series):
+        settings = pd.Series(settings)
 
     # flat the stream
     part = part.semiFlat
@@ -354,7 +360,7 @@ def instrument(part, SETTINGS, part_list=None, to_bins=False):
 
         serialised_measure = pd.DataFrame(
             measure(i+1, m,
-                    SETTINGS,
+                    settings,
                     INSTRUMENT_BLOCK,
                     ENVIRONMENT_BLOCK,
                     to_bins
@@ -373,10 +379,12 @@ def instrument(part, SETTINGS, part_list=None, to_bins=False):
 
 
 # MIDI -> Interpretation (Pandas DataFrame)
-def file(path, SETTINGS, save_as=None, to_bins=False):
+def file(path, settings=None, save_as=None, to_bins=False):
     """Serialise a .mid file"""
-    if not isinstance(SETTINGS, pd.Series):
-        SETTINGS = pd.Series(SETTINGS)
+    if settings is None:
+        settings = SETTINGS
+    if not isinstance(settings, pd.Series):
+        settings = pd.Series(settings)
 
     score = music21.converter.parse(path)
     score = score.makeNotation()
@@ -388,7 +396,7 @@ def file(path, SETTINGS, save_as=None, to_bins=False):
     for part in score.parts:
         serialised_parts.append(
             instrument(part,
-                       SETTINGS,
+                       settings,
                        part_list,
                        to_bins)
         )

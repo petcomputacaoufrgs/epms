@@ -1,6 +1,11 @@
 import pandas as pd
 import music21
 
+SETTINGS = {
+    'RESOLUTION': 16,
+    'KEYBOARD_SIZE': 88,
+    'KEYBOARD_OFFSET': 21
+}
 
 def get_transpose_interval_from_C(ks):
     if ks is None:
@@ -40,10 +45,10 @@ def get_continuous(arr):
     return on_frames
 
 
-def measure(m_metric, m_environment, m_performance, SETTINGS):
+def measure(m_metric, m_environment, m_performance, settings):
     """Deserialize a single multi hot encoding measure to a music21 measure"""
-    if not isinstance(SETTINGS, pd.Series):
-        SETTINGS = pd.Series(SETTINGS)
+    if not isinstance(settings, pd.Series):
+        settings = pd.Series(settings)
 
     deserialized_measure = music21.stream.Measure(number=int(m_metric.MEASURE.iloc[0]))
 
@@ -87,10 +92,10 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
                         # get the volume of the note
                         note_obj.volume.velocityScalar = volume_tuple[0]
                         # get the start frame of the note
-                        beat_offset = (this_note_on_frames[0][1] / SETTINGS.RESOLUTION)
+                        beat_offset = (this_note_on_frames[0][1] / settings.RESOLUTION)
                         note_obj.offset = beat_offset
                         # get the duration of the note
-                        beat_dur = len(this_note_on_frames) / SETTINGS.RESOLUTION
+                        beat_dur = len(this_note_on_frames) / settings.RESOLUTION
                         note_obj.duration.quarterLength = beat_dur
                         # insert into measure
                         deserialized_measure.insert(note_obj)
@@ -105,10 +110,10 @@ def measure(m_metric, m_environment, m_performance, SETTINGS):
     return deserialized_measure
 
 
-def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERFORMANCE_BLOCK, save_as=None):
+def instrument(settings, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERFORMANCE_BLOCK, save_as=None):
     """Deserialize an instrument line"""
-    if not isinstance(SETTINGS, pd.Series):
-        SETTINGS = pd.Series(SETTINGS)
+    if not isinstance(settings, pd.Series):
+        settings = pd.Series(settings)
 
     # M21 object to be returned
     deserialized_part = music21.stream.Part()
@@ -144,7 +149,7 @@ def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERF
         midi_measure = measure(measure_metric,
                                measure_environment,
                                measure_performance,
-                               SETTINGS)
+                               settings)
 
         deserialized_part.insert(measure_index * int(measure_environment.TS.iloc[0][0]), midi_measure)
 
@@ -156,10 +161,12 @@ def instrument(SETTINGS, INSTRUMENT_BLOCK, METRIC_BLOCK, ENVIRONMENT_BLOCK, PERF
     return deserialized_part
 
 
-def file(serialised, SETTINGS, save_as=None):
+def file(serialised, settings = None, save_as=None):
     """Deserialize a whole file"""
-    if not isinstance(SETTINGS, pd.Series):
-        SETTINGS = pd.Series(SETTINGS)
+    if settings is None:
+        settings = SETTINGS
+    if not isinstance(settings, pd.Series):
+        settings = pd.Series(settings)
 
     deserialized_score = music21.stream.Score()
 
@@ -196,9 +203,9 @@ def file(serialised, SETTINGS, save_as=None):
             }
         )
 
-        PERFORMANCE_BLOCK = serial.iloc[:, range((len(serial.columns) - SETTINGS.KEYBOARD_SIZE), len(serial.columns))]
+        PERFORMANCE_BLOCK = serial.iloc[:, range((len(serial.columns) - settings.KEYBOARD_SIZE), len(serial.columns))]
 
-        part = instrument(SETTINGS,
+        part = instrument(settings,
                           INSTRUMENT_BLOCK,
                           METRIC_BLOCK.reset_index(drop=True),
                           ENVIRONMENT_BLOCK.reset_index(drop=True),
